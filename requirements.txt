@@ -1,0 +1,5 @@
+python-telegram-bot[ext]==21.0.1
+SQLAlchemy==2.0.28
+aiohttp==3.9.3
+python-dotenv==1.0.1
+APScheduler==3.10.4
