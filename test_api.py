@@ -1,66 +1,67 @@
-"""OpenRouter guncel model testi - genis arama"""
+"""Gemini image generation modeli testi"""
 import asyncio
 import aiohttp
-from dotenv import load_dotenv
+import base64
 import os
-
+from dotenv import load_dotenv
 load_dotenv()
 
-async def test_models():
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    
-    # Guncel OpenRouter model isimleri (2024-2026 arasi bilinen calisan modeller)
-    models_to_test = [
-        "deepseek/deepseek-chat",
-        "deepseek/deepseek-r1:free",
-        "google/gemma-2-9b-it:free",
-        "meta-llama/llama-3.3-70b-instruct",
-        "meta-llama/llama-3.2-3b-instruct:free",
-        "mistralai/mistral-small-3.1-24b-instruct:free",
-        "qwen/qwen-2.5-72b-instruct",
-        "nousresearch/hermes-3-llama-3.1-405b",
-        "openchat/openchat-7b:free",
-        "microsoft/phi-3-mini-128k-instruct:free",
-    ]
-    
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://localhost",
-        "X-Title": "AILoverBot"
+async def test_model(model_name):
+    key = os.getenv("GEMINI_API_KEY")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key}"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [{"parts": [{"text": "Generate a photorealistic selfie of a beautiful 23 year old woman with dark brown wavy hair, hazel eyes, warm smile, natural makeup"}]}],
+        "generationConfig": {
+            "responseModalities": ["IMAGE", "TEXT"]
+        }
     }
     
-    working = []
-    
-    for model in models_to_test:
-        payload = {
-            "model": model,
-            "messages": [
-                {"role": "user", "content": "Selam"}
-            ],
-            "max_tokens": 20
-        }
-        
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(url, headers=headers, json=payload) as response:
-                    status = response.status
-                    if status == 200:
-                        import json
-                        data = json.loads(await response.text())
-                        content = data['choices'][0]['message']['content']
-                        print(f"[OK] {model} -> {content[:60]}")
-                        working.append(model)
+    print(f"\nTesting {model_name}...")
+    try:
+        async with aiohttp.ClientSession() as s:
+            async with s.post(url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=60)) as r:
+                print(f"  Status: {r.status}")
+                if r.status == 200:
+                    data = await r.json()
+                    for cand in data.get('candidates', []):
+                        for part in cand.get('content', {}).get('parts', []):
+                            if 'inlineData' in part:
+                                mime = part['inlineData'].get('mimeType', 'image/png')
+                                ext = 'png' if 'png' in mime else 'jpg'
+                                img_data = base64.b64decode(part['inlineData']['data'])
+                                safe_name = model_name.replace("/", "_").replace(".", "_")
+                                filepath = f"test_{safe_name}.{ext}"
+                                with open(filepath, 'wb') as f:
+                                    f.write(img_data)
+                                print(f"  BASARILI! {filepath} ({len(img_data)} bytes)")
+                                return True
+                            elif 'text' in part:
+                                print(f"  Text: {part['text'][:100]}")
+                    # Check for blocked
+                    if data.get('promptFeedback', {}).get('blockReason'):
+                        print(f"  BLOCKED: {data['promptFeedback']['blockReason']}")
                     else:
-                        data = await response.text()
-                        print(f"[XX] {model} -> {status}")
-        except Exception as e:
-            print(f"[ER] {model} -> {e}")
-    
-    print(f"\n=== CALISAN MODELLER ({len(working)}) ===")
-    for m in working:
-        print(f"  - {m}")
-    return working
+                        print(f"  No image in response")
+                else:
+                    data = await r.json()
+                    msg = data.get('error', {}).get('message', '')[:200]
+                    print(f"  Hata: {msg}")
+    except Exception as e:
+        print(f"  Exception: {e}")
+    return False
 
-asyncio.run(test_models())
+async def main():
+    models = [
+        "gemini-2.0-flash-exp-image-generation",
+        "nano-banana-pro-preview",
+        "gemini-2.5-flash-image",
+        "gemini-3.1-flash-image-preview",
+    ]
+    for m in models:
+        success = await test_model(m)
+        if success:
+            print(f"\n=== CALISAN MODEL: {m} ===")
+            return
+
+asyncio.run(main())
