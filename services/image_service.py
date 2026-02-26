@@ -65,15 +65,20 @@ async def _call_fal(full_prompt: str) -> str:
 async def _call_pollinations(full_prompt: str) -> str:
     """Pollinations.ai ile ucretsiz gorsel uret (API key gerekmez)."""
     try:
-        encoded_prompt = urllib.parse.quote(full_prompt)
-        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=768&height=1024&seed=42&model=flux&nologo=true"
+        encoded_prompt = urllib.parse.quote(full_prompt[:500])  # URL uzunluk limiti
+        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=768&height=1024&seed=42&nologo=true"
         
-        # URL'nin calistigini dogrula
+        # Gorseli indir (Pollinations HEAD desteklemiyor, GET ile al)
+        import os, uuid
         async with aiohttp.ClientSession() as session:
-            async with session.head(image_url, allow_redirects=True) as response:
+            async with session.get(image_url, timeout=aiohttp.ClientTimeout(total=30)) as response:
                 if response.status == 200:
+                    os.makedirs("temp_images", exist_ok=True)
+                    filepath = f"temp_images/{uuid.uuid4()}.jpg"
+                    with open(filepath, 'wb') as f:
+                        f.write(await response.read())
                     logger.info("Gorsel basarili: Pollinations.ai")
-                    return image_url
+                    return filepath  # Lokal dosya yolu doner
                 else:
                     logger.warning(f"Pollinations.ai hata: {response.status}")
                     return None

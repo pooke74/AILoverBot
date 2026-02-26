@@ -238,12 +238,18 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
                 await update.message.reply_text("(Hazırlanıyorum... Fotoğraf birazdan gelecek 📸)")
                 await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='upload_photo')
                 
-                img_url = await generate_image(bot_response, character_id=char_id)
+                img_result = await generate_image(bot_response, character_id=char_id)
                 
-                if img_url:
+                if img_result:
                     if not user.is_vip:
                         user.credits -= 9
-                    await update.message.reply_photo(photo=img_url)
+                    # Lokal dosya mı yoksa URL mi kontrol et
+                    if img_result.startswith("temp_images/") or img_result.startswith("temp_images\\"):
+                        with open(img_result, 'rb') as photo_file:
+                            await update.message.reply_photo(photo=photo_file)
+                        os.remove(img_result)
+                    else:
+                        await update.message.reply_photo(photo=img_result)
                 else:
                     await update.message.reply_text("Kameram bozuldu tatlım, şu an çekemiyorum 😢")
             else:
