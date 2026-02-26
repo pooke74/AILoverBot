@@ -38,14 +38,14 @@ def main():
     print("   AILoverBot - Sanal AI Partner v2.0")
     print("=" * 50)
     
-    print("\n📦 Veritabanı başlatılıyor...")
+    print("\n[*] Veritabani baslatiliyor...")
     init_db()
     
     if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "your_telegram_bot_token_here":
-        print("❌ Lütfen .env dosyasına TELEGRAM_BOT_TOKEN değerini girin.")
+        print("[X] Lutfen .env dosyasina TELEGRAM_BOT_TOKEN degerini girin.")
         return
 
-    print("🤖 Bot uygulaması kuruluyor...")
+    print("[*] Bot uygulamasi kuruluyor...")
     application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).post_init(post_init).build()
     
     # ===== KOMUTLAR =====
@@ -56,23 +56,23 @@ def main():
     application.add_handler(CommandHandler('karakterler', characters_command))
     application.add_handler(CommandHandler('karakter', switch_character_command))
     
-    # ===== ÖDEME İŞLEYİCİLERİ =====
+    # ===== ODEME ISLEYICILERI =====
     application.add_handler(PreCheckoutQueryHandler(precheckout_callback))
     application.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback))
     application.add_handler(CallbackQueryHandler(button_callback))
     
-    # ===== MESAJ İŞLEYİCİLERİ =====
+    # ===== MESAJ ISLEYICILERI =====
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    application.add_handler(MessageHandler(filters.VOICE, handle_voice))  # Sesli mesaj desteği
+    application.add_handler(MessageHandler(filters.VOICE, handle_voice))
     
-    print("\n✅ Bot başarıyla kuruldu!")
-    print("🎭 Karakterler: Mia, Elif, Yuki, Defne")
-    print("💳 Ödeme: Telegram Stars + Kripto + Test Modu")
-    print("🎤 Sesli mesaj: Whisper STT aktif")
-    print("📢 Proaktif mesajlaşma: Aktif")
-    print("\n🚀 Bot dinlemeye başlıyor...\n")
+    print("\n[OK] Bot basariyla kuruldu!")
+    print("[*] Karakterler: Mia, Elif, Yuki, Defne")
+    print("[*] Odeme: Telegram Stars + Kripto + Test Modu")
+    print("[*] Sesli mesaj: Whisper STT aktif")
+    print("[*] Proaktif mesajlasma: Aktif")
+    print("\n[>>>] Bot dinlemeye basliyor...\n")
     
-    application.run_polling()
+    application.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__':
     main()
