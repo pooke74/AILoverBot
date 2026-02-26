@@ -194,11 +194,16 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
     # LLM cevabı al (karakter bazlı)
     bot_response = await generate_response(chat_history, character_id=char_id)
     
-    # [GÖRSEL GÖNDER] kontrolü
+    # [GÖRSEL GÖNDER] kontrolü + kullanıcı kelime tespiti
     img_requested = False
     if "[GÖRSEL GÖNDER]" in bot_response:
         img_requested = True
         bot_response = bot_response.replace("[GÖRSEL GÖNDER]", "").strip()
+    
+    # Kullanıcı mesajında fotoğraf isteği var mı? (LLM etiketi koymasa bile tetikle)
+    photo_keywords = ["selfie", "foto", "fotoğraf", "resim", "görsel", "özçekim", "çek", "göster kendini", "nasıl görünüyorsun", "at bir foto"]
+    if any(kw in user_text.lower() for kw in photo_keywords):
+        img_requested = True
 
     with SessionLocal() as db_session:
         user = get_or_create_user(db_session, update.effective_user)

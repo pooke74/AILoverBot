@@ -28,7 +28,7 @@ async def generate_image(prompt: str, character_id: str = 'mia') -> str:
     payload = {
         "prompt": full_prompt,
         "negative_prompt": negative_prompt,
-        "image_size": "portrait_4_5",
+        "image_size": "portrait_4_3",
         "num_inference_steps": 28,
         "guidance_scale": 3.5,
         "num_images": 1,
