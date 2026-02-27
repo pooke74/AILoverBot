@@ -1,70 +1,89 @@
 import logging
+from datetime import datetime
 from telegram import Update, LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from database.models import SessionLocal, User, Transaction
+from prompts.character import get_character
 
 logger = logging.getLogger(__name__)
 
 # ============================================================
-# ÖDEME SİSTEMİ
-# Telegram Stars (yerleşik ödeme) + Test Modu + Kripto bilgi
+# ODEME SISTEMI v2.0
+# Telegram Stars + Test Modu + Kripto + VIP Abonelik
 # ============================================================
 
 CREDIT_PACKAGES = [
-    {"id": "pack_100", "credits": 100, "price": 50, "stars": 50, "label": "💎 100 Kredi"},
-    {"id": "pack_500", "credits": 500, "price": 200, "stars": 200, "label": "💎 500 Kredi"},
-    {"id": "pack_vip", "credits": 9999, "price": 500, "stars": 500, "label": "👑 VIP Sınırsız (Aylık)", "is_vip": True},
+    {"id": "pack_50",   "credits": 50,   "stars": 25,   "label": "\U0001f48e 50 Kredi",   "desc": "~50 mesaj"},
+    {"id": "pack_200",  "credits": 200,  "stars": 75,   "label": "\U0001f48e 200 Kredi",  "desc": "~200 mesaj veya 20 fotograf"},
+    {"id": "pack_500",  "credits": 500,  "stars": 150,  "label": "\U0001f48e 500 Kredi",  "desc": "~500 mesaj veya 50 fotograf", "popular": True},
+    {"id": "pack_vip_weekly",  "credits": 9999, "stars": 100,  "label": "\U0001f451 VIP Haftalik",  "desc": "7 gun sinirsiz", "is_vip": True},
+    {"id": "pack_vip_monthly", "credits": 9999, "stars": 300,  "label": "\U0001f451 VIP Aylik",    "desc": "30 gun sinirsiz", "is_vip": True},
 ]
 
+# Basarili odeme sonrasi karakter tepkileri
+PAYMENT_REACTIONS = {
+    "mia": "Ayyy cok tatlisin! Benim icin harcama yaptin, cok mutlu oldum! Gel sana ozel bir seyler gostereyim \U0001f618",
+    "elif": "Hmm, aferin. Boyle devam et, odul hak ediyorsun \U0001f608",
+    "yuki": "S-sagol... Cok dusuncelisin senpai! B-bunu beklemiyordum >.<",
+    "defne": "Ay cok sukur ya! Artik seninle daha fazla vakit gecirebilirim \U0001f48b Beni yemege de cikarirsin artik!",
+}
+
 async def buy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Kullanıcıya ödeme seçeneklerini gösterir."""
+    """Kullaniciya odeme seceneklerini gosterir."""
+    with SessionLocal() as session:
+        user = session.query(User).filter(User.telegram_id == update.effective_user.id).first()
+        current_credits = user.credits if user else 0
+    
     keyboard = []
     for pkg in CREDIT_PACKAGES:
-        keyboard.append([
-            InlineKeyboardButton(
-                f"{pkg['label']} - {pkg['price']} TL ({pkg['stars']}⭐)", 
-                callback_data=f"buy_{pkg['id']}"
-            )
-        ])
-    # Test modu butonu
-    keyboard.append([InlineKeyboardButton("🧪 Test: Ücretsiz 50 Kredi", callback_data="buy_test_50")])
-    # Kripto ödeme bilgi butonu
-    keyboard.append([InlineKeyboardButton("₿ Kripto ile Öde", callback_data="buy_crypto_info")])
+        popular = " \u2b50 EN POPULER" if pkg.get("popular") else ""
+        label = f"{pkg['label']} - {pkg['stars']}\u2b50{popular}"
+        keyboard.append([InlineKeyboardButton(label, callback_data=f"buy_{pkg['id']}")])
+    
+    keyboard.append([InlineKeyboardButton("\U0001f9ea Test: Ucretsiz 50 Kredi", callback_data="buy_test_50")])
+    keyboard.append([InlineKeyboardButton("\u20bf Kripto ile Ode (USDT)", callback_data="buy_crypto_info")])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(
-        "💎 **Kredi Paketleri**\n\n"
-        "Aşağıdaki paketlerden birini seçerek kredi yükleyebilirsin.\n"
-        "Telegram Stars ⭐ ile ödeme yapabilirsin.\n\n"
-        "💰 Metin mesajı: 1 kredi\n"
-        "🎤 Sesli yanıt: 5 kredi\n"
-        "📸 Fotoğraf: 10 kredi\n",
+        "\U0001f48e **Kredi Yukle**\n\n"
+        f"Mevcut kredin: {current_credits} \U0001f48e\n\n"
+        "\u270f Mesaj: 1 kredi\n"
+        "\U0001f3a4 Sesli yanit: 5 kredi\n"
+        "\U0001f4f8 Fotograf: 10 kredi\n\n"
+        "\U0001f451 **VIP Avantajlari:**\n"
+        "\u2022 Sinirsiz mesaj, ses ve fotograf\n"
+        "\u2022 Oncelikli destek\n"
+        "\u2022 Ozel icerikler\n",
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Satın alma butonlarına tıklama işleyicisi."""
+    """Satin alma butonlarina tiklama isleyicisi."""
     query = update.callback_query
     await query.answer()
-    
     data = query.data
     
-    # Kripto bilgi sayfası
+    # Kripto bilgi sayfasi
     if data == "buy_crypto_info":
+        keyboard = [[InlineKeyboardButton("\u25c0 Geri", callback_data="buy_back")]]
         await query.edit_message_text(
-            "₿ **Kripto ile Ödeme**\n\n"
-            "Aşağıdaki adrese USDT (TRC-20) göndererek kredi yükleyebilirsin:\n\n"
+            "\u20bf **Kripto ile Odeme**\n\n"
+            "Asagidaki adrese USDT (TRC-20) gonder:\n\n"
             "`TXXXXXXXXXXXXXXXXXXXXXXXXX`\n\n"
-            "💡 Ödeme yaptıktan sonra işlem hash'ini bize ilet.\n"
-            "Kredi 1 saat içinde hesabına yüklenir.\n\n"
-            "⚠️ Minimum: 10 USDT (100 Kredi)",
+            "\U0001f4b0 **Fiyatlar:**\n"
+            "\u2022 10 USDT = 200 Kredi\n"
+            "\u2022 25 USDT = 600 Kredi (bonus!)\n"
+            "\u2022 50 USDT = VIP 3 Ay\n\n"
+            "Odeme yaptiktan sonra islem hash'ini @destek_hesabi adresine ilet.\n"
+            "Kredin 1 saat icinde yuklenir.",
+            reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode='Markdown'
         )
         return
     
-    # Test modu (ücretsiz kredi)
+    # Test modu (ucretsiz kredi)
     if data == "buy_test_50":
         with SessionLocal() as session:
             user = session.query(User).filter(User.telegram_id == update.effective_user.id).first()
@@ -73,64 +92,91 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 tx = Transaction(user_id=user.id, amount=50, price_label="Test 50 Kredi", payment_method='test')
                 session.add(tx)
                 session.commit()
+                
+                char = get_character(user.selected_character)
                 await query.edit_message_text(
-                    f"🧪 Test kredisi yüklendi!\n\n"
-                    f"Hesabına 50 kredi eklendi.\n"
-                    f"Toplam kredin: {user.credits} 💎\n\n"
-                    f"Hadi sohbete devam edelim! 💬"
+                    f"\U0001f9ea Test kredisi yuklendi!\n\n"
+                    f"\U0001f48e +50 kredi eklendi\n"
+                    f"Toplam kredin: {user.credits} \U0001f48e\n\n"
+                    f"{char['emoji']} {char['name']}: \"{PAYMENT_REACTIONS.get(user.selected_character, 'Tesekkurler!')}\""
                 )
         return
     
-    # Telegram Stars ödeme akışı
+    # Geri butonu
+    if data == "buy_back":
+        # buy_command'in icerigini tekrar goster
+        with SessionLocal() as session:
+            user = session.query(User).filter(User.telegram_id == update.effective_user.id).first()
+            current_credits = user.credits if user else 0
+        
+        keyboard = []
+        for pkg in CREDIT_PACKAGES:
+            popular = " \u2b50 EN POPULER" if pkg.get("popular") else ""
+            label = f"{pkg['label']} - {pkg['stars']}\u2b50{popular}"
+            keyboard.append([InlineKeyboardButton(label, callback_data=f"buy_{pkg['id']}")])
+        keyboard.append([InlineKeyboardButton("\U0001f9ea Test: Ucretsiz 50 Kredi", callback_data="buy_test_50")])
+        keyboard.append([InlineKeyboardButton("\u20bf Kripto ile Ode (USDT)", callback_data="buy_crypto_info")])
+        
+        await query.edit_message_text(
+            "\U0001f48e **Kredi Yukle**\n\n"
+            f"Mevcut kredin: {current_credits} \U0001f48e\n\n"
+            "\u270f Mesaj: 1 kredi | \U0001f3a4 Ses: 5 | \U0001f4f8 Foto: 10\n\n"
+            "\U0001f451 VIP = Sinirsiz her sey!",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+        return
+    
+    # Telegram Stars odeme akisi
     if data.startswith("buy_pack_"):
         pkg_id = data.replace("buy_", "")
         pkg = next((p for p in CREDIT_PACKAGES if p['id'] == pkg_id), None)
         
         if not pkg:
-            await query.edit_message_text("Paket bulunamadı.")
+            await query.edit_message_text("Paket bulunamadi.")
             return
         
-        # Telegram Stars ile ödeme faturası oluştur
         try:
             await context.bot.send_invoice(
                 chat_id=update.effective_chat.id,
                 title=pkg['label'],
-                description=f"{pkg['credits']} kredi yükle ve sohbete devam et!",
+                description=f"{pkg['desc']} - {pkg['credits']} kredi yukle!",
                 payload=f"credits_{pkg['credits']}_{pkg.get('is_vip', False)}",
-                currency="XTR",  # Telegram Stars
+                currency="XTR",
                 prices=[LabeledPrice(label=pkg['label'], amount=pkg['stars'])],
             )
-            await query.edit_message_text(f"Ödeme faturası gönderildi! ⭐ Lütfen aşağıdaki faturayı onayla.")
+            await query.edit_message_text(f"Odeme faturasi gonderildi! \u2b50 Asagidaki faturayi onayla.")
         except Exception as e:
-            logger.error(f"Invoice oluşturma hatası: {e}")
-            # Fallback: Test modu gibi davran
+            logger.error(f"Invoice olusturma hatasi: {e}")
+            # Fallback: Test modu
             with SessionLocal() as session:
                 user = session.query(User).filter(User.telegram_id == update.effective_user.id).first()
                 if user:
                     user.credits += pkg['credits']
                     if pkg.get('is_vip'):
                         user.is_vip = True
-                    tx = Transaction(user_id=user.id, amount=pkg['credits'], price_label=pkg['label'], payment_method='test')
+                    tx = Transaction(user_id=user.id, amount=pkg['credits'], price_label=pkg['label'], payment_method='test_fallback')
                     session.add(tx)
                     session.commit()
+                    
+                    char = get_character(user.selected_character)
+                    vip_text = "\n\U0001f451 VIP uyeligin aktif!" if pkg.get('is_vip') else ""
                     await query.edit_message_text(
-                        f"🎉 Tebrikler! {pkg['credits']} kredi yüklendi!\n"
-                        f"Toplam kredin: {user.credits} 💎\n\n"
-                        f"{'👑 VIP üyeliğin aktif!' if pkg.get('is_vip') else ''}"
+                        f"\U0001f389 {pkg['credits']} kredi yuklendi!{vip_text}\n"
+                        f"Toplam kredin: {user.credits} \U0001f48e\n\n"
+                        f"{char['emoji']} {char['name']}: \"{PAYMENT_REACTIONS.get(user.selected_character, 'Tesekkurler!')}\""
                     )
 
 async def precheckout_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Telegram Stars ödeme onayı (pre-checkout query)."""
+    """Telegram Stars odeme onayi."""
     query = update.pre_checkout_query
-    # Tüm ödemeleri onayla
     await query.answer(ok=True)
 
 async def successful_payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Telegram Stars ödeme başarılı olduğunda kredi yükle."""
+    """Telegram Stars odeme basarili oldugunda kredi yukle."""
     payment = update.message.successful_payment
     payload = payment.invoice_payload
     
-    # payload formatı: "credits_100_False" veya "credits_9999_True"
     parts = payload.split("_")
     credits_amount = int(parts[1])
     is_vip = parts[2] == "True"
@@ -152,12 +198,16 @@ async def successful_payment_callback(update: Update, context: ContextTypes.DEFA
             session.add(tx)
             session.commit()
             
+            char = get_character(user.selected_character)
+            reaction = PAYMENT_REACTIONS.get(user.selected_character, "Tesekkurler!")
+            vip_text = "\n\U0001f451 VIP uyeligin aktif edildi!" if is_vip else ""
+            
             await update.message.reply_text(
-                f"🎉 Ödeme başarılı! Teşekkürler!\n\n"
-                f"💎 {credits_amount} kredi hesabına yüklendi.\n"
-                f"Toplam kredin: {user.credits} 💎\n"
-                f"{'👑 VIP üyeliğin aktif edildi!' if is_vip else ''}\n\n"
-                f"Hadi sohbete devam edelim! 💬"
+                f"\U0001f389 **Odeme basarili!** Tesekkurler!\n\n"
+                f"\U0001f48e +{credits_amount} kredi yuklendi{vip_text}\n"
+                f"Toplam kredin: {user.credits} \U0001f48e\n\n"
+                f"{char['emoji']} _{reaction}_",
+                parse_mode='Markdown'
             )
     
-    logger.info(f"Başarılı ödeme: user={update.effective_user.id}, credits={credits_amount}, vip={is_vip}")
+    logger.info(f"Basarili odeme: user={update.effective_user.id}, credits={credits_amount}, vip={is_vip}")
