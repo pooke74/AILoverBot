@@ -9,12 +9,16 @@ from prompts.character import get_image_base_prompt
 
 logger = logging.getLogger(__name__)
 
-async def generate_image(prompt: str, character_id: str = 'mia') -> str:
+async def generate_image(prompt: str, character_id: str = 'mia', use_raw_prompt: bool = False) -> str:
     """
     Gorsel uretir. Oncelik: 1) Gemini Image Gen  2) Fal.ai  3) Pollinations
+    use_raw_prompt=True ise prompt'a base_prompt eklenmez (zaten ekli).
     """
-    base_prompt = get_image_base_prompt(character_id)
-    full_prompt = base_prompt + prompt
+    if use_raw_prompt:
+        full_prompt = prompt
+    else:
+        base_prompt = get_image_base_prompt(character_id)
+        full_prompt = base_prompt + prompt
     
     # 1. Gemini Image Generation (ucretsiz, calisiyor!)
     result = await _call_gemini_image(full_prompt)

@@ -9,7 +9,7 @@ from services.llm_service import generate_response
 from services.image_service import generate_image
 from services.audio_service import generate_audio
 from services.stt_service import transcribe_voice
-from prompts.character import get_character, list_characters, CHARACTERS
+from prompts.character import get_character, list_characters, CHARACTERS, get_image_pose_prompt
 
 def get_or_create_user(session: Session, tg_user):
     user = session.query(User).filter(User.telegram_id == tg_user.id).first()
@@ -185,7 +185,7 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
         past_messages = session.query(Message).filter(
             Message.user_id == user.id,
             Message.character_id == char_id
-        ).order_by(Message.created_at.desc()).limit(10).all()
+        ).order_by(Message.created_at.desc()).limit(20).all()
         past_messages.reverse()
         
         chat_history = [{"role": msg.role, "content": msg.content} for msg in past_messages]
@@ -238,7 +238,9 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
                 await update.message.reply_text("(Hazırlanıyorum... Fotoğraf birazdan gelecek 📸)")
                 await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='upload_photo')
                 
-                img_result = await generate_image(bot_response, character_id=char_id)
+                # Kullanici mesajina gore akilli poz secimi
+                pose_prompt = get_image_pose_prompt(char_id, user_text)
+                img_result = await generate_image(pose_prompt, character_id=char_id, use_raw_prompt=True)
                 
                 if img_result:
                     if not user.is_vip:
