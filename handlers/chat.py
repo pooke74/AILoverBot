@@ -4,12 +4,13 @@ from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from sqlalchemy.orm import Session
-from database.models import SessionLocal, User, Message
+from database.models import SessionLocal, User, Message, generate_referral_code
 from services.llm_service import generate_response
 from services.image_service import generate_image
 from services.audio_service import generate_audio
 from services.stt_service import transcribe_voice
-from prompts.character import get_character, list_characters, CHARACTERS, get_image_pose_prompt
+from prompts.character import (get_character, list_characters, CHARACTERS, 
+                                get_image_pose_prompt, calculate_intimacy_level, get_intimacy_info)
 
 def get_or_create_user(session: Session, tg_user):
     user = session.query(User).filter(User.telegram_id == tg_user.id).first()
@@ -20,18 +21,41 @@ def get_or_create_user(session: Session, tg_user):
             first_name=tg_user.first_name,
             credits=50,
             selected_character='mia',
-            last_active=datetime.utcnow()
+            last_active=datetime.utcnow(),
+            referral_code=generate_referral_code(),
+            daily_free_remaining=5,
+            daily_free_reset_date=datetime.utcnow().strftime('%Y-%m-%d')
         )
         session.add(user)
         session.commit()
         session.refresh(user)
     return user
 
+def _check_daily_reset(user):
+    """Gunluk ucretsiz mesaj hakkini sifirla (yeni gun basladiysa)."""
+    today = datetime.utcnow().strftime('%Y-%m-%d')
+    if user.daily_free_reset_date != today:
+        user.daily_free_remaining = 5
+        user.daily_free_reset_date = today
+
+def _update_intimacy(user):
+    """Mesaj sayisina gore yakinlik seviyesini guncelle."""
+    user.total_messages_sent = (user.total_messages_sent or 0) + 1
+    new_level = calculate_intimacy_level(user.total_messages_sent)
+    if new_level > (user.intimacy_level or 1):
+        user.intimacy_level = new_level
+        return True  # Seviye atlandi!
+    return False
+
 def _credit_footer(user) -> str:
-    """Her mesajin altina kucuk kredi gostergesi ekler."""
+    """Her mesajin altina kredi + seviye gostergesi ekler."""
+    level = user.intimacy_level or 1
+    intimacy = get_intimacy_info(level)
+    level_bar = '\u2764' * level + '\u2661' * (5 - level)
     if user.is_vip:
-        return "\n\n_\u2728 VIP_"
-    return f"\n\n_\U0001f48e {user.credits}_"
+        return f"\n\n_{level_bar} {intimacy['name']} | \u2728 VIP_"
+    free_text = f" | \U0001f381 {user.daily_free_remaining}" if (user.daily_free_remaining or 0) > 0 else ""
+    return f"\n\n_{level_bar} {intimacy['name']} | \U0001f48e {user.credits}{free_text}_"
 
 # ===================== KOMUTLAR =====================
 
@@ -340,10 +364,18 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
         user = get_or_create_user(session, update.effective_user)
         char_id = user.selected_character
         
-        if user.credits <= 0 and not user.is_vip:
+        # Gunluk ucretsiz mesaj sifirla
+        _check_daily_reset(user)
+        
+        # Kredi/gunluk hak kontrolu
+        has_daily_free = (user.daily_free_remaining or 0) > 0
+        has_credits = user.credits > 0
+        
+        if not user.is_vip and not has_daily_free and not has_credits:
             await update.message.reply_text(
-                f"Tatlim, maalesef kredin bitmis.\n"
-                f"Benimle konusmaya devam etmek icin /buy yazarak kredi alabilirsin!"
+                f"Tatlim, bugunluk mesaj hakkin ve kredin bitmis.\n"
+                f"Yarin 5 yeni bedava mesajin olacak!\n"
+                f"Hemen devam etmek icin /buy yazarak kredi alabilirsin!"
             )
             return
         
@@ -351,9 +383,16 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
         user_msg = Message(user_id=user.id, role='user', content=user_text, character_id=char_id)
         session.add(user_msg)
         
-        # Kredi dus (VIP degilse)
+        # Kredi/gunluk hak dus
         if not user.is_vip:
-            user.credits -= 1
+            if has_daily_free:
+                user.daily_free_remaining -= 1
+            else:
+                user.credits -= 1
+        
+        # Yakinlik seviyesi guncelle
+        leveled_up = _update_intimacy(user)
+        intimacy_level = user.intimacy_level or 1
         
         # Aktivite guncelle
         user.last_active = datetime.utcnow()
@@ -368,8 +407,8 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
         chat_history = [{"role": msg.role, "content": msg.content} for msg in past_messages]
         session.commit()
         
-    # LLM cevabi al (karakter bazli)
-    bot_response = await generate_response(chat_history, character_id=char_id)
+    # LLM cevabi al (karakter + yakinlik bazli)
+    bot_response = await generate_response(chat_history, character_id=char_id, intimacy_level=intimacy_level)
     
     # [GORSEL GONDER] kontrolu + kullanici kelime tespiti
     img_requested = False
@@ -442,3 +481,71 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
                 await update.message.reply_text("Sana ozel bir fotograf atacaktim ama kredin yetmiyor tatlim. (/buy)")
         
         db_session.commit()
+    
+    # Seviye atlama bildirimi (LLM cevabindan sonra)
+    if leveled_up:
+        with SessionLocal() as s:
+            u = get_or_create_user(s, update.effective_user)
+            info = get_intimacy_info(u.intimacy_level or 1)
+            level_bar = '\u2764' * (u.intimacy_level or 1) + '\u2661' * (5 - (u.intimacy_level or 1))
+            await update.message.reply_text(
+                f"\u2728 **Seviye Atladin!**\n\n"
+                f"{level_bar} Artik **{info['name']}** seviyesindesin!\n"
+                f"_{info['prompt_modifier'][:80]}_",
+                parse_mode='Markdown'
+            )
+
+async def referral_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/davet komutu - referral sistemi."""
+    with SessionLocal() as session:
+        user = get_or_create_user(session, update.effective_user)
+        
+        # Referral kodu yoksa olustur
+        if not user.referral_code:
+            user.referral_code = generate_referral_code()
+            session.commit()
+        
+        # Referral kodu kullanma
+        if context.args:
+            code = context.args[0].upper()
+            
+            if code == user.referral_code:
+                await update.message.reply_text("Kendi davet kodunu kullanamazsin!")
+                return
+            
+            if user.referred_by:
+                await update.message.reply_text("Zaten bir davet kodu kullanmissin!")
+                return
+            
+            # Davet eden kullaniciyi bul
+            referrer = session.query(User).filter(User.referral_code == code).first()
+            if not referrer:
+                await update.message.reply_text(f"'{code}' gecersiz bir davet kodu.")
+                return
+            
+            # Odul ver
+            user.referred_by = code
+            user.credits += 25
+            referrer.credits += 50
+            referrer.referral_count = (referrer.referral_count or 0) + 1
+            session.commit()
+            
+            await update.message.reply_text(
+                f"\U0001f389 **Davet kodu kullanildi!**\n\n"
+                f"Sen +25 kredi kazandin!\n"
+                f"Davet eden de +50 kredi kazandi!\n\n"
+                f"\U0001f48e Kredin: {user.credits}",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Davet kodunu goster
+        await update.message.reply_text(
+            f"\U0001f381 **Davet Sistemi**\n\n"
+            f"Senin davet kodun: `{user.referral_code}`\n\n"
+            f"Arkadasina bu kodu gonder, o /davet {user.referral_code} yazsin:\n"
+            f"\u2022 Arkadasin +25 kredi kazanir\n"
+            f"\u2022 Sen +50 kredi kazanirsin!\n\n"
+            f"\U0001f465 Toplam davet ettigin: {user.referral_count or 0} kisi",
+            parse_mode='Markdown'
+        )

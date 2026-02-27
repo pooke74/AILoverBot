@@ -7,7 +7,7 @@ from handlers.chat import (
     start_command, help_command, profile_command, 
     handle_message, handle_voice,
     characters_command, switch_character_command,
-    menu_command, menu_callback
+    menu_command, menu_callback, referral_command
 )
 from handlers.payment import buy_command, button_callback, precheckout_callback, successful_payment_callback
 from services.proactive_service import check_and_send_proactive_messages
@@ -57,6 +57,7 @@ def main():
     application.add_handler(CommandHandler('buy', buy_command))
     application.add_handler(CommandHandler('karakterler', characters_command))
     application.add_handler(CommandHandler('karakter', switch_character_command))
+    application.add_handler(CommandHandler('davet', referral_command))
     
     # ===== ODEME ISLEYICILERI =====
     application.add_handler(PreCheckoutQueryHandler(precheckout_callback))
