@@ -6,7 +6,8 @@ from database.models import init_db
 from handlers.chat import (
     start_command, help_command, profile_command, 
     handle_message, handle_voice,
-    characters_command, switch_character_command
+    characters_command, switch_character_command,
+    menu_command, menu_callback
 )
 from handlers.payment import buy_command, button_callback, precheckout_callback, successful_payment_callback
 from services.proactive_service import check_and_send_proactive_messages
@@ -35,7 +36,7 @@ async def post_init(application):
 
 def main():
     print("=" * 50)
-    print("   AILoverBot - Sanal AI Partner v2.0")
+    print("   AILoverBot - Sanal AI Partner v2.1")
     print("=" * 50)
     
     print("\n[*] Veritabani baslatiliyor...")
@@ -51,6 +52,7 @@ def main():
     # ===== KOMUTLAR =====
     application.add_handler(CommandHandler('start', start_command))
     application.add_handler(CommandHandler('help', help_command))
+    application.add_handler(CommandHandler('menu', menu_command))
     application.add_handler(CommandHandler('profile', profile_command))
     application.add_handler(CommandHandler('buy', buy_command))
     application.add_handler(CommandHandler('karakterler', characters_command))
@@ -59,6 +61,9 @@ def main():
     # ===== ODEME ISLEYICILERI =====
     application.add_handler(PreCheckoutQueryHandler(precheckout_callback))
     application.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback))
+    
+    # ===== MENU + ODEME BUTON CALLBACK =====
+    application.add_handler(CallbackQueryHandler(menu_callback, pattern="^(menu_|select_char_)"))
     application.add_handler(CallbackQueryHandler(button_callback))
     
     # ===== MESAJ ISLEYICILERI =====

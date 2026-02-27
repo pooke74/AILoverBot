@@ -1,7 +1,7 @@
 import os
 import random
 from datetime import datetime
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from sqlalchemy.orm import Session
 from database.models import SessionLocal, User, Message
@@ -27,38 +27,198 @@ def get_or_create_user(session: Session, tg_user):
         session.refresh(user)
     return user
 
+def _credit_footer(user) -> str:
+    """Her mesajin altina kucuk kredi gostergesi ekler."""
+    if user.is_vip:
+        return "\n\n_\u2728 VIP_"
+    return f"\n\n_\U0001f48e {user.credits}_"
+
 # ===================== KOMUTLAR =====================
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Gelistirilmis /start - inline butonlu karsilama."""
     with SessionLocal() as session:
         user = get_or_create_user(session, update.effective_user)
         char = get_character(user.selected_character)
+        
+        keyboard = [
+            [InlineKeyboardButton("\U0001f3ad Karakter Sec", callback_data="menu_characters"),
+             InlineKeyboardButton("\U0001f464 Profilim", callback_data="menu_profile")],
+            [InlineKeyboardButton("\U0001f48e Kredi Al", callback_data="menu_buy"),
+             InlineKeyboardButton("\u2753 Yardim", callback_data="menu_help")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
         await update.message.reply_text(
-            f"Selam {user.first_name}! Ben {char['name']}. {char['emoji']}\n"
-            f"Seninle tanıştığıma çok sevindim!\n\n"
-            f"💎 Kredin: {user.credits}\n"
-            f"🎭 Aktif Karakter: {char['name']}\n\n"
-            f"Bana dilediğin her şeyi yazabilirsin!\n"
-            f"Sesli mesaj da gönderebilirsin, seni anlayabilirim 🎤\n\n"
-            f"📋 Komutlar:\n"
-            f"/karakterler - Karakter listesi\n"
-            f"/karakter [isim] - Karakter değiştir\n"
-            f"/profile - Profilin\n"
-            f"/buy - Kredi satın al"
+            f"Selam {user.first_name}! Ben {char['name']} {char['emoji']}\n"
+            f"Seninle tanistigima cok sevindim!\n\n"
+            f"\U0001f48e Kredin: {user.credits}  |  \U0001f3ad {char['name']}\n\n"
+            f"Bana istedigin her seyi yazabilirsin, seni dinliyorum...",
+            reply_markup=reply_markup
+        )
+
+async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/menu komutu - Ana menu inline butonlarla."""
+    with SessionLocal() as session:
+        user = get_or_create_user(session, update.effective_user)
+        char = get_character(user.selected_character)
+        
+        keyboard = [
+            [InlineKeyboardButton(f"\U0001f3ad Karakter Sec (simdi: {char['name']})", callback_data="menu_characters")],
+            [InlineKeyboardButton("\U0001f464 Profilim", callback_data="menu_profile"),
+             InlineKeyboardButton("\U0001f48e Kredi Al", callback_data="menu_buy")],
+            [InlineKeyboardButton("\U0001f4cb Kredi Bilgisi", callback_data="menu_pricing"),
+             InlineKeyboardButton("\u2753 Yardim", callback_data="menu_help")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        vip_text = "\u2728 VIP Uye" if user.is_vip else f"\U0001f48e {user.credits} kredi"
+        await update.message.reply_text(
+            f"\U0001f4cb **Ana Menu**\n\n"
+            f"\U0001f3ad Karakter: {char['emoji']} {char['name']}\n"
+            f"\U0001f4b0 Bakiye: {vip_text}\n"
+            f"\U0001f4c5 Uyelik: {user.created_at.strftime('%d.%m.%Y')}",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+
+async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Menu butonlarina tiklama isleyicisi."""
+    query = update.callback_query
+    await query.answer()
+    data = query.data
+    
+    if data == "menu_characters":
+        # Karakter secim butonlari
+        keyboard = []
+        with SessionLocal() as session:
+            user = get_or_create_user(session, query.from_user)
+            current = user.selected_character
+        
+        for cid, char in CHARACTERS.items():
+            label = f"{char['emoji']} {char['name']} ({char['age']}) - {char['description']}"
+            if cid == current:
+                label = f"\u2705 {label}"
+            keyboard.append([InlineKeyboardButton(label, callback_data=f"select_char_{cid}")])
+        keyboard.append([InlineKeyboardButton("\u25c0 Geri", callback_data="menu_back")])
+        
+        await query.edit_message_text(
+            "\U0001f3ad **Karakter Sec**\n\n"
+            "Sohbet etmek istedigin karakteri sec:",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    
+    elif data.startswith("select_char_"):
+        char_id = data.replace("select_char_", "")
+        if char_id in CHARACTERS:
+            with SessionLocal() as session:
+                user = get_or_create_user(session, query.from_user)
+                user.selected_character = char_id
+                session.commit()
+            
+            char = get_character(char_id)
+            keyboard = [[InlineKeyboardButton("\u25c0 Menu", callback_data="menu_back")]]
+            await query.edit_message_text(
+                f"{char['emoji']} **{char['name']}** secildi!\n\n"
+                f"_{char['description']}_\n\n"
+                f"Hadi, bana bir seyler yaz!",
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
+    
+    elif data == "menu_profile":
+        with SessionLocal() as session:
+            user = get_or_create_user(session, query.from_user)
+            char = get_character(user.selected_character)
+            msg_count = session.query(Message).filter(Message.user_id == user.id).count()
+            vip_text = "\u2728 VIP Uye" if user.is_vip else "\U0001f48e Standart"
+        
+        keyboard = [[InlineKeyboardButton("\u25c0 Menu", callback_data="menu_back")]]
+        await query.edit_message_text(
+            f"\U0001f464 **Profilin**\n\n"
+            f"\U0001f48e Kredi: {user.credits}\n"
+            f"\U0001f451 Uyelik: {vip_text}\n"
+            f"\U0001f3ad Karakter: {char['emoji']} {char['name']}\n"
+            f"\U0001f4ac Mesaj Sayisi: {msg_count}\n"
+            f"\U0001f4c5 Kayit: {user.created_at.strftime('%d.%m.%Y')}",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    
+    elif data == "menu_pricing":
+        keyboard = [[InlineKeyboardButton("\U0001f48e Kredi Al", callback_data="menu_buy"),
+                      InlineKeyboardButton("\u25c0 Menu", callback_data="menu_back")]]
+        await query.edit_message_text(
+            "\U0001f4b0 **Kredi Bilgisi**\n\n"
+            "\u270f Metin mesaji: 1 kredi\n"
+            "\U0001f3a4 Sesli yanit: 5 kredi\n"
+            "\U0001f4f8 Fotograf: 10 kredi\n\n"
+            "\U0001f451 VIP uyeler sinirsiz kullanir!",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    
+    elif data == "menu_help":
+        keyboard = [[InlineKeyboardButton("\u25c0 Menu", callback_data="menu_back")]]
+        await query.edit_message_text(
+            "\u2753 **Yardim**\n\n"
+            "Bana metin veya sesli mesaj gonderebilirsin!\n\n"
+            "\U0001f4cb **Komutlar:**\n"
+            "/menu - Ana menu\n"
+            "/karakterler - Karakter listesi\n"
+            "/karakter [isim] - Karakter degistir\n"
+            "/profile - Profilin\n"
+            "/buy - Kredi satin al\n\n"
+            "\U0001f4f8 **Fotograf icin:** 'selfie at', 'fotograf gonder' yaz\n"
+            "\U0001f3a4 **Sesli yanit icin:** sesli mesaj gonder",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    
+    elif data == "menu_buy":
+        # Odeme modulu callback'ine yonlendir  
+        from handlers.payment import buy_command
+        # Yeni mesaj olarak buy menusunu ac
+        await query.edit_message_text("\U0001f48e Kredi satin almak icin /buy yazin.")
+    
+    elif data == "menu_back":
+        # Ana menuye don
+        with SessionLocal() as session:
+            user = get_or_create_user(session, query.from_user)
+            char = get_character(user.selected_character)
+        
+        keyboard = [
+            [InlineKeyboardButton(f"\U0001f3ad Karakter Sec (simdi: {char['name']})", callback_data="menu_characters")],
+            [InlineKeyboardButton("\U0001f464 Profilim", callback_data="menu_profile"),
+             InlineKeyboardButton("\U0001f48e Kredi Al", callback_data="menu_buy")],
+            [InlineKeyboardButton("\U0001f4cb Kredi Bilgisi", callback_data="menu_pricing"),
+             InlineKeyboardButton("\u2753 Yardim", callback_data="menu_help")]
+        ]
+        
+        vip_text = "\u2728 VIP Uye" if user.is_vip else f"\U0001f48e {user.credits} kredi"
+        await query.edit_message_text(
+            f"\U0001f4cb **Ana Menu**\n\n"
+            f"\U0001f3ad Karakter: {char['emoji']} {char['name']}\n"
+            f"\U0001f4b0 Bakiye: {vip_text}\n"
+            f"\U0001f4c5 Uyelik: {user.created_at.strftime('%d.%m.%Y')}",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
         )
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "💖 Bana metin veya sesli mesaj gönderebilirsin!\n\n"
-        "📋 **Komutlar:**\n"
-        "/karakterler - Tüm karakterleri gör\n"
-        "/karakter [isim] - Karakter değiştir\n"
+        "\U0001f496 Bana metin veya sesli mesaj gonderebilirsin!\n\n"
+        "\U0001f4cb **Komutlar:**\n"
+        "/menu - Ana menu\n"
+        "/karakterler - Tum karakterleri gor\n"
+        "/karakter [isim] - Karakter degistir\n"
         "/profile - Kredin ve profilin\n"
-        "/buy - Kredi satın al\n\n"
-        "💰 **Kredi Detayları:**\n"
-        "  ✏️ Metin mesajı: 1 kredi\n"
-        "  🎤 Sesli yanıt: 5 kredi\n"
-        "  📸 Fotoğraf: 10 kredi",
+        "/buy - Kredi satin al\n\n"
+        "\U0001f4b0 **Kredi Detaylari:**\n"
+        "  \u270f Metin mesaji: 1 kredi\n"
+        "  \U0001f3a4 Sesli yanit: 5 kredi\n"
+        "  \U0001f4f8 Fotograf: 10 kredi",
         parse_mode='Markdown'
     )
     
@@ -66,28 +226,45 @@ async def profile_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     with SessionLocal() as session:
         user = get_or_create_user(session, update.effective_user)
         char = get_character(user.selected_character)
-        vip_text = "👑 VIP Üye" if user.is_vip else "💎 Standart"
+        msg_count = session.query(Message).filter(Message.user_id == user.id).count()
+        vip_text = "\u2728 VIP Uye" if user.is_vip else "\U0001f48e Standart"
         await update.message.reply_text(
-            f"👤 **Profilin**\n\n"
-            f"Kalan Kredin: {user.credits} 💎\n"
-            f"Üyelik: {vip_text}\n"
+            f"\U0001f464 **Profilin**\n\n"
+            f"Kalan Kredin: {user.credits} \U0001f48e\n"
+            f"Uyelik: {vip_text}\n"
             f"Aktif Karakter: {char['emoji']} {char['name']}\n"
-            f"Kayıt Tarihi: {user.created_at.strftime('%d.%m.%Y')}\n\n"
-            f"Kredi almak için /buy yazabilirsin.",
+            f"Toplam Mesaj: {msg_count}\n"
+            f"Kayit Tarihi: {user.created_at.strftime('%d.%m.%Y')}\n\n"
+            f"Kredi almak icin /buy yazabilirsin.",
             parse_mode='Markdown'
         )
 
 async def characters_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Tüm karakterleri listeler."""
-    await update.message.reply_text(list_characters(), parse_mode='Markdown')
+    """Tum karakterleri inline butonlarla listeler."""
+    keyboard = []
+    with SessionLocal() as session:
+        user = get_or_create_user(session, update.effective_user)
+        current = user.selected_character
+    
+    for cid, char in CHARACTERS.items():
+        label = f"{char['emoji']} {char['name']} ({char['age']}) - {char['description']}"
+        if cid == current:
+            label = f"\u2705 {label}"
+        keyboard.append([InlineKeyboardButton(label, callback_data=f"select_char_{cid}")])
+    
+    await update.message.reply_text(
+        "\U0001f3ad **Karakter Sec**\n\nSohbet etmek istedigin karakteri sec:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode='Markdown'
+    )
 
 async def switch_character_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Kullanıcının aktif karakterini değiştirir."""
+    """Kullanicinin aktif karakterini degistirir."""
     if not context.args:
         await update.message.reply_text(
-            "Karakter seçmek için karakter ismini yaz!\n"
-            "Örnek: `/karakter elif`\n\n"
-            "Mevcut karakterler: " + ", ".join(CHARACTERS.keys()),
+            "Karakter secmek icin karakter ismini yaz!\n"
+            "Ornek: `/karakter elif`\n\n"
+            "Ya da /menu yazarak butonlarla secebilirsin!",
             parse_mode='Markdown'
         )
         return
@@ -96,7 +273,7 @@ async def switch_character_command(update: Update, context: ContextTypes.DEFAULT
     
     if char_id not in CHARACTERS:
         await update.message.reply_text(
-            f"❌ '{char_id}' diye bir karakter yok.\n"
+            f"'{char_id}' diye bir karakter yok.\n"
             f"Mevcut karakterler: {', '.join(CHARACTERS.keys())}"
         )
         return
@@ -108,16 +285,16 @@ async def switch_character_command(update: Update, context: ContextTypes.DEFAULT
         
         char = get_character(char_id)
         await update.message.reply_text(
-            f"{char['emoji']} Harika! Artık **{char['name']}** ile sohbet ediyorsun!\n\n"
+            f"{char['emoji']} Harika! Artik **{char['name']}** ile sohbet ediyorsun!\n\n"
             f"_{char['description']}_\n\n"
-            f"Hadi, bana bir şeyler yaz! 💬",
+            f"Hadi, bana bir seyler yaz!",
             parse_mode='Markdown'
         )
 
-# ===================== MESAJ İŞLEYİCİLER =====================
+# ===================== MESAJ ISLEYICILER =====================
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Metin mesajı işleyicisi."""
+    """Metin mesaji isleyicisi."""
     user_text = update.message.text
     if not user_text:
         return
@@ -125,12 +302,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Sesli mesaj işleyicisi (Feature 5: Voice Input).
-    Kullanıcının sesli mesajını Whisper ile metne çevirir, sonra normal metin gibi işler.
+    Sesli mesaj isleyicisi.
+    1. Kullanicinin sesli mesajini indirir.
+    2. Whisper ile metne cevirir.
+    3. _process_user_input ile normal mesaj gibi isler.
     """
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
     
-    # Sesli mesajı indir
+    # Sesli mesaji indir
     voice = update.message.voice
     file = await context.bot.get_file(voice.file_id)
     
@@ -138,23 +317,22 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     local_path = f"temp_audio/voice_{update.effective_user.id}_{voice.file_unique_id}.ogg"
     await file.download_to_drive(local_path)
     
-    # Whisper ile metne çevir
+    # Whisper ile metne cevir
     transcription = await transcribe_voice(local_path)
     
     if not transcription:
-        await update.message.reply_text("Sesini tam duyamadım, tekrar söyler misin? 🎤")
+        await update.message.reply_text("Sesini tam duyamadim, tekrar soyler misin?")
         return
     
-    # Kullanıcıya ne anladığını göster (şeffaflık)
-    await update.message.reply_text(f"🎤 _\"{transcription}\"_", parse_mode='Markdown')
+    # Kullaniciya ne anladigini goster
+    await update.message.reply_text(f"\U0001f3a4 _\"{transcription}\"_", parse_mode='Markdown')
     
-    # Normal mesaj gibi işle
+    # Normal mesaj gibi isle
     await _process_user_input(update, context, transcription, force_voice_response=True)
 
 async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE, user_text: str, force_voice_response: bool = False):
     """
-    Hem metin hem sesli mesaj için ortak işleme mantığı.
-    force_voice_response=True ise cevap sesli olarak gönderilir.
+    Hem metin hem sesli mesaj icin ortak isleme mantigi.
     """
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
     
@@ -163,25 +341,24 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
         char_id = user.selected_character
         
         if user.credits <= 0 and not user.is_vip:
-            char = get_character(char_id)
             await update.message.reply_text(
-                f"Tatlım, maalesef kredin bitmiş 😢\n"
-                f"Benimle konuşmaya devam etmek için /buy yazarak kredi alabilirsin!"
+                f"Tatlim, maalesef kredin bitmis.\n"
+                f"Benimle konusmaya devam etmek icin /buy yazarak kredi alabilirsin!"
             )
             return
         
-        # Kullanıcı mesajını kaydet
+        # Kullanici mesajini kaydet
         user_msg = Message(user_id=user.id, role='user', content=user_text, character_id=char_id)
         session.add(user_msg)
         
-        # Kredi düş (VIP değilse)
+        # Kredi dus (VIP degilse)
         if not user.is_vip:
             user.credits -= 1
         
-        # last_active güncelle
+        # Aktivite guncelle
         user.last_active = datetime.utcnow()
         
-        # Geçmiş 10 mesajı al (aynı karakter bazında)
+        # Gecmis 20 mesaji al (karakter bazli)
         past_messages = session.query(Message).filter(
             Message.user_id == user.id,
             Message.character_id == char_id
@@ -191,31 +368,36 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
         chat_history = [{"role": msg.role, "content": msg.content} for msg in past_messages]
         session.commit()
         
-    # LLM cevabı al (karakter bazlı)
+    # LLM cevabi al (karakter bazli)
     bot_response = await generate_response(chat_history, character_id=char_id)
     
-    # [GÖRSEL GÖNDER] kontrolü + kullanıcı kelime tespiti
+    # [GORSEL GONDER] kontrolu + kullanici kelime tespiti
     img_requested = False
-    if "[GÖRSEL GÖNDER]" in bot_response:
+    if "[GORSEL GONDER]" in bot_response:
         img_requested = True
-        bot_response = bot_response.replace("[GÖRSEL GÖNDER]", "").strip()
+        bot_response = bot_response.replace("[GORSEL GONDER]", "").strip()
+    if "\u00c3\u0096RSEL G\u00c3\u0096NDER" in bot_response:
+        img_requested = True
+        bot_response = bot_response.replace("[G\u00d6RSEL G\u00d6NDER]", "").strip()
     
-    # Kullanıcı mesajında fotoğraf isteği var mı? (LLM etiketi koymasa bile tetikle)
-    photo_keywords = ["selfie", "foto", "fotoğraf", "resim", "görsel", "özçekim", "çek", "göster kendini", "nasıl görünüyorsun", "at bir foto"]
+    # Kullanici mesajinda fotograf istegi var mi?
+    photo_keywords = ["selfie", "foto", "fotograf", "resim", "gorsel", "ozcekim", 
+                       "cek", "goster kendini", "nasil gorunuyorsun", "at bir foto",
+                       "fotografini", "yuzunu goster", "kiyafetini goster"]
     if any(kw in user_text.lower() for kw in photo_keywords):
         img_requested = True
 
     with SessionLocal() as db_session:
         user = get_or_create_user(db_session, update.effective_user)
-        # Asistan mesajını kaydet
+        # Asistan mesajini kaydet
         bot_msg = Message(user_id=user.id, role='assistant', content=bot_response, character_id=char_id)
         db_session.add(bot_msg)
         
         if bot_response:
-            # Sesli yanıt mantığı
+            # Sesli yanit mantigi
             should_send_voice = force_voice_response
             if not should_send_voice:
-                if "sesi" in user_text.lower() or "konuş" in user_text.lower() or random.random() < 0.05:
+                if "sesi" in user_text.lower() or "konus" in user_text.lower() or random.random() < 0.05:
                     should_send_voice = True
                     
             if should_send_voice and (user.credits >= 4 or user.is_vip):
@@ -228,14 +410,16 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
                     await update.message.reply_voice(voice=open(audio_path, 'rb'))
                     os.remove(audio_path)
                 else:
-                    await update.message.reply_text(bot_response)
+                    # Sesli yanit basarisiz, metin + kredi footer gonder
+                    await update.message.reply_text(bot_response + _credit_footer(user), parse_mode='Markdown')
             else:
-                await update.message.reply_text(bot_response)
+                # Normal metin + kredi footer
+                await update.message.reply_text(bot_response + _credit_footer(user), parse_mode='Markdown')
 
-        # Görsel gönderme
+        # Gorsel gonderme
         if img_requested:
             if user.credits >= 9 or user.is_vip:
-                await update.message.reply_text("(Hazırlanıyorum... Fotoğraf birazdan gelecek 📸)")
+                await update.message.reply_text("(Hazirlaniyorum... Fotograf birazdan gelecek \U0001f4f8)")
                 await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='upload_photo')
                 
                 # Kullanici mesajina gore akilli poz secimi
@@ -245,7 +429,7 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
                 if img_result:
                     if not user.is_vip:
                         user.credits -= 9
-                    # Lokal dosya mı yoksa URL mi kontrol et
+                    # Lokal dosya mi yoksa URL mi kontrol et
                     if img_result.startswith("temp_images/") or img_result.startswith("temp_images\\"):
                         with open(img_result, 'rb') as photo_file:
                             await update.message.reply_photo(photo=photo_file)
@@ -253,8 +437,8 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
                     else:
                         await update.message.reply_photo(photo=img_result)
                 else:
-                    await update.message.reply_text("Kameram bozuldu tatlım, şu an çekemiyorum 😢")
+                    await update.message.reply_text("Kameram bozuldu tatlim, su an cekemiyorum")
             else:
-                await update.message.reply_text("Sana özel bir fotoğraf atacaktım ama kredin yetmiyor tatlım. 😢 (/buy)")
+                await update.message.reply_text("Sana ozel bir fotograf atacaktim ama kredin yetmiyor tatlim. (/buy)")
         
         db_session.commit()
