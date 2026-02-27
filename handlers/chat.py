@@ -441,7 +441,7 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
                     
             if should_send_voice and (user.credits >= 4 or user.is_vip):
                 await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='record_voice')
-                audio_path = await generate_audio(bot_response)
+                audio_path = await generate_audio(bot_response, character_id=char_id)
                 
                 if audio_path:
                     if not user.is_vip:

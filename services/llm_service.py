@@ -116,20 +116,20 @@ async def _call_openrouter(model: str, messages: list) -> str:
 
 async def generate_response(chat_history: list, character_id: str = 'mia', intimacy_level: int = 1) -> str:
     """
-    Oncelik sirasi: 1) Gemini (ucretsiz)  2) OpenAI  3) OpenRouter
+    Oncelik sirasi: 1) OpenAI GPT-4o-mini (birincil, sansursuz)  2) Gemini (yedek, ucretsiz)  3) OpenRouter
     """
     from prompts.character import get_system_prompt_with_intimacy
     system_prompt = get_system_prompt_with_intimacy(character_id, intimacy_level)
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(chat_history)
     
-    # 1. Gemini dene (birincil, ucretsiz)
-    result = await _call_gemini(messages)
+    # 1. OpenAI dene (birincil - daha iyi kalite, daha az sansur)
+    result = await _call_openai(messages)
     if result:
         return result
     
-    # 2. OpenAI dene
-    result = await _call_openai(messages)
+    # 2. Gemini dene (yedek, ucretsiz)
+    result = await _call_gemini(messages)
     if result:
         return result
     
