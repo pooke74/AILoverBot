@@ -71,10 +71,25 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_handler(MessageHandler(filters.VOICE, handle_voice))
     
+    # ===== GLOBAL HATA ISLEYICI =====
+    async def error_handler(update, context):
+        logger.error(f"Hata: {context.error}", exc_info=context.error)
+        # Kullaniciya nazik hata mesaji
+        try:
+            if update and update.effective_message:
+                await update.effective_message.reply_text(
+                    "Bir sorun olustu, tekrar dener misin? Hemen duzeltiyorum!"
+                )
+        except:
+            pass
+    
+    application.add_error_handler(error_handler)
+    
     print("\n[OK] Bot basariyla kuruldu!")
+    print("[*] v2.1 - OpenAI + Gemini + Referans Foto")
     print("[*] Karakterler: Mia, Elif, Yuki, Defne")
-    print("[*] Odeme: Telegram Stars + Kripto + Test Modu")
-    print("[*] Sesli mesaj: Whisper STT aktif")
+    print("[*] Odeme: Telegram Stars + Kripto")
+    print("[*] Sesli: ElevenLabs TTS + Whisper STT")
     print("[*] Proaktif mesajlasma: Aktif")
     print("\n[>>>] Bot dinlemeye basliyor...\n")
     

@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+.env
+*.db
+temp_audio/
+temp_images/
+test_api.py
+.git/
+.gitignore
