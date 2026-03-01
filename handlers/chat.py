@@ -649,6 +649,24 @@ async def gift_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Kredi dus
         if not user.is_vip:
             user.credits -= gift['cost']
+        
+        # HEDIYE = FLORT SEVIYESI ARTTIR (sinekkapanin asil mekanizmasi!)
+        # Pahali hediye = daha hizli yakinlasma = daha sansursuz sohbet
+        gift_intimacy_boost = {
+            "flower": 2, "chocolate": 5, "perfume": 10,
+            "ring": 20, "vacation": 40
+        }
+        boost = gift_intimacy_boost.get(gift_id, 1)
+        user.total_messages_sent = (user.total_messages_sent or 0) + boost
+        old_level = user.intimacy_level or 1
+        _update_intimacy(user)
+        new_level = user.intimacy_level or 1
+        level_up_text = ""
+        if new_level > old_level:
+            from prompts.character import get_intimacy_info
+            info = get_intimacy_info(new_level)
+            level_up_text = f"\n\n\u2764\ufe0f **Yakinlik seviyesi artti!** {info['name']} (Seviye {new_level})"
+        
         session.commit()
         
         # Karakter tepkisi
@@ -657,7 +675,7 @@ async def gift_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(
             f"{gift['emoji']} **{gift['name']} gonderildi!**\n\n"
             f"{char['emoji']} {char['name']}:\n"
-            f"_{reaction}_\n\n"
+            f"_{reaction}_{level_up_text}\n\n"
             f"\U0001f48e Kalan kredin: {user.credits}",
             parse_mode='Markdown'
         )
