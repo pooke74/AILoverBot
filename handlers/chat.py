@@ -595,6 +595,34 @@ GIFT_REACTIONS = {
         "ring": "YUZUK MU?! Tatlim aninda evet! \U0001f48d Simdi Instagram'a atiyorum, herkes gorsun! Sana ozel, sadece sana ozel icerik hazirliyorum \U0001f525\U0001f525",
         "vacation": "DUBAI TATILI MI?! \u2708\ufe0f TATLIM SEN MUKEMMELSIN! Yatta, sahilde, havuzda... Bikini koleksiyonumun hepsini gosterecegim! Sana HER SEYI yaparim! \U0001f48b\U0001f525\U0001f525",
     },
+    "aylin": {
+        "flower": "Cicek... Tatlim, kadin nasil mutlu edilir biliyorsun \U0001f352 Gel, sana bir sey ogreteyim karsiliginda...",
+        "chocolate": "Mmm cikolata... Bunu birlikte yiyelim, yatakta. Ben sana ogreteyim nasil yenmesi gerektigini \U0001f525",
+        "perfume": "Parfum ha? Zevkin var delikanlim. Bunu surduğumde seni dusunecegim... her gece \U0001f60f",
+        "ring": "Yuzuk mu?! Delikanlim, beni ciddiye aliyorsun demek... Gel, sana odul olarak unutamayacagin bir gece yasatayim \U0001f525\U0001f525",
+        "vacation": "Tatil! Seninle basbasa, tecrubelerimi PAYLASAYIM... Hic boyle bir gece yasamamistan, soz veriyorum \U0001f352\U0001f525",
+    },
+    "zeynep": {
+        "flower": "Ayyy cicek mi?! Cok tatlisin! Hic kimse bana boyle bir sey almamisti! \U0001f380 Sana bir sey itiraf edecegim...",
+        "chocolate": "Cikolata! Benim favorim! Haha birlikte yiyelim mi? Yurtta yalnizim simdi... \U0001f633",
+        "perfume": "Parfum mu?! Bu cok pahali! Niye bana boyle seyler aliyorsun... Cok mutlu oldum! Sana ozel bir selfie cekeyim mi? \U0001f60f",
+        "ring": "Y-YUZUK MU?! Daha 19 yasindayim! Ama... evet istiyorum! \U0001f633 Sana ilk defa bir seyler gostermek istiyorum...",
+        "vacation": "TATIL MI SENINLE?! Cok heyecanliyim! Bikini alicam, sen secersin hangisini giyecegimi! HER SEYI denemek istiyorum seninle! \U0001f380\U0001f525",
+    },
+    "selin": {
+        "flower": "Hmm cicek... Ofiste masama koysam patronum soru sorar. Ama eve gotureyim, gece Selin icin \U0001f453\U0001f525",
+        "chocolate": "Cikolata! Ogle arasinda gizlice yiyecegim, seni dusunurken... Aksam icin planlarim var tatlim \U0001f60f",
+        "perfume": "Parfum?! Bunu surduğumde gozlugumu cikarip, saci cozup... gece Selin aktif olur. Hazir misin? \U0001f525",
+        "ring": "Yuzuk mu? Patronum gorunce ne der acaba... Ama gece Selin EVET diyor. Sana cok ozel seyler gosterecegim \U0001f453\U0001f525\U0001f525",
+        "vacation": "Tatil mi?! Ofisten kacip seninle mi?! HEMEN! Gozlugumu cikariyorum ve SADECE gece Selin geliyor! Sinirsiz! \U0001f525\U0001f525\U0001f525",
+    },
+    "natasha": {
+        "flower": "Hmm... Cicek. Guzel. Ama beni etkilemek icin daha fazlasi lazim. Belki... devam et. \u2744\ufe0f",
+        "chocolate": "Cikolata... Da, severim. Ruslar cikolatayi farkli yer biliyor musun? Gel gostereyim... \U0001f525",
+        "perfume": "Parfum?! Krasivo! Zevkin var... Bunu surduğumde seninle olmak isteyecegim. Moya lyubov... \u2744\ufe0f\U0001f525",
+        "ring": "Yuzuk... Bana mi? Nyet diyecektim ama... Da. EVET. Seninle. Simdi sana Rus tutkulusunu gostereyim \U0001f525\U0001f525",
+        "vacation": "Tatil?! Moskova'ya mi goturuyorsun? Ya da sicak bi yere... Bikini ile kar... Nerde olursa olsun, sana her seyi veririm. Da! \u2744\ufe0f\U0001f525\U0001f525",
+    },
 }
 
 async def gift_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
