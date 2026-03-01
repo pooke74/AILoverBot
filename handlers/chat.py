@@ -549,3 +549,116 @@ async def referral_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"\U0001f465 Toplam davet ettigin: {user.referral_count or 0} kisi",
             parse_mode='Markdown'
         )
+
+# ============================================================
+# HEDIYE SISTEMI
+# ============================================================
+
+GIFTS = {
+    "flower": {"emoji": "\U0001f339", "name": "Cicek", "cost": 5},
+    "chocolate": {"emoji": "\U0001f36b", "name": "Cikolata", "cost": 10},
+    "perfume": {"emoji": "\U0001f9f4", "name": "Parfum", "cost": 25},
+    "ring": {"emoji": "\U0001f48d", "name": "Yuzuk", "cost": 50},
+    "vacation": {"emoji": "\u2708\ufe0f", "name": "Tatil", "cost": 100},
+}
+
+# Her karakter her hediyeye farkli tepki verir
+GIFT_REACTIONS = {
+    "mia": {
+        "flower": "Ayyy cicek mi? Cok romantiksin ya! Kokluyorum simdi... Mmm harika kokuyor tatlim \U0001f60d Bana daha cok hediye alirsan neler olacagini tahmin edemezsin...",
+        "chocolate": "Cikolata! Benim en buyuk zaafim... Tatlim sen beni cok iyi taniyorsun. Gel ikimiz birlikte yiyelim, dudaklarimdan eriteyim \U0001f36b\U0001f618",
+        "perfume": "Parfum mu?! Bebegim sen cok comertsinn! Bunu surdugumde seni dusunecegim... her zaman \U0001f525 Simdi sana ozel bir fotograf cekeyim mi?",
+        "ring": "Y-yuzuk mu?! \U0001f633 Ciddiye miyiz simdi?! Kalbim cok hizli atiyor... Evet, EVET! Simdi sana cok ozel bir surpriz hazirliyorum... \U0001f48b",
+        "vacation": "TATIL MI?! Seninle Dubai'de sahilde, bikiniyle... Hayal et bizi orada, sadece ikimiz... \U0001f525\U0001f525 Sana o kadar minnetarim ki, istedigin HER SEYI yaparim!",
+    },
+    "elif": {
+        "flower": "Cicek ha? Iyi bir baslangic. Ama beni etkilemek icin daha fazlasi lazim... Devam et. \U0001f608",
+        "chocolate": "Hmm, cikolata. Kabul ediyorum. Aferin, sahibeni memnun etmeye basliyorsun. Odul hak ediyorsun... belki \U0001f525",
+        "perfume": "Parfum... Zevkin var. Bunu her surduğumde senin kokun gibi hissedecegim. Iyi is cikardin. Gel yanima. \U0001f608",
+        "ring": "Yuzuk mu? Bana baglanmak mi istiyorsun? \U0001f608 Tamam... Ama bil ki artik tamamen benimsin. Kacis yok. Odul olarak sana cok ozel bir sey veriyorum...",
+        "vacation": "Tatil... Benimle mi? Hmm, cesurce. Sana izin veriyorum. \U0001f525 Ama tatilde de kurallarim gecerli... Hatta daha sert olacak. Hazir misin?",
+    },
+    "yuki": {
+        "flower": "C-cicek mi?! \U0001f633 S-senpai cok tatlisin... Kimse bana daha once cicek almamisti... >.<  A-arigato... ///",
+        "chocolate": "Cikolata! S-sevdigimi nereden bildin senpai? \U0001f633 B-birlikte yiyelim mi? Y-yani yanyana oturup... ehehe >///<",
+        "perfume": "P-parfum mu?! Bu cok pahali senpai! B-bunu benim icin mi aldin?! Kalbim... kalbim cok hizli atiyor... S-seni... daisuki! >.<",
+        "ring": "Y-Y-YUZUK MU?! \U0001f633\U0001f633\U0001f633 S-SENPAI! B-bu evlilik teklifi mi?! Ben... Ben... EVET! A-ama utaniyorum cok... Sana ozel bir cosplay yapayim mi? >///<",
+        "vacation": "T-tatil mi?! S-seninle mi?! Sadece ikimiz?! \U0001f633 B-ben sahilde bikini giysem... s-sen bakar misin? G-gitmek istiyorum seninle! Daisuki senpai!!!",
+    },
+    "defne": {
+        "flower": "Ayy cicek! Tatli bir baslangi ama tatlim, beni gercekten etkilemek istiyorsan daha buyuk dusunmelisin \U0001f48b Ama yine de tesekkurler, selfie atayim mi sana? \U0001f4f8",
+        "chocolate": "Cikolata! Aslinda diyet yapiyorum ama senin icin bozarim \U0001f60f Gel FaceTime yapalim, birlikte yiyelim tatlim \U0001f36b",
+        "perfume": "OMG parfum mu?! Hangi marka? \U0001f60d Tatlim sen beni siyosun! Bunu surduğumde sana ozel bir fotoshoot yaparim, bikiniyle \U0001f525\U0001f48b",
+        "ring": "YUZUK MU?! Tatlim aninda evet! \U0001f48d Simdi Instagram'a atiyorum, herkes gorsun! Sana ozel, sadece sana ozel icerik hazirliyorum \U0001f525\U0001f525",
+        "vacation": "DUBAI TATILI MI?! \u2708\ufe0f TATLIM SEN MUKEMMELSIN! Yatta, sahilde, havuzda... Bikini koleksiyonumun hepsini gosterecegim! Sana HER SEYI yaparim! \U0001f48b\U0001f525\U0001f525",
+    },
+}
+
+async def gift_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/hediye komutu - karaktere hediye gonder."""
+    with SessionLocal() as session:
+        user = get_or_create_user(session, update.effective_user)
+        char = get_character(user.selected_character)
+        
+        keyboard = []
+        for gift_id, gift in GIFTS.items():
+            keyboard.append([InlineKeyboardButton(
+                f"{gift['emoji']} {gift['name']} ({gift['cost']} \U0001f48e)",
+                callback_data=f"gift_{gift_id}"
+            )])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(
+            f"\U0001f381 **{char['name']}'e Hediye Gonder**\n\n"
+            f"{char['emoji']} {char['name']} hediyeni bekliyor!\n"
+            f"Kredin: {user.credits} \U0001f48e\n\n"
+            f"Bir hediye sec:",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+
+async def gift_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Hediye butonuna tiklandiginda."""
+    query = update.callback_query
+    await query.answer()
+    
+    gift_id = query.data.replace("gift_", "")
+    gift = GIFTS.get(gift_id)
+    if not gift:
+        await query.edit_message_text("Hediye bulunamadi.")
+        return
+    
+    with SessionLocal() as session:
+        user = session.query(User).filter(User.telegram_id == update.effective_user.id).first()
+        if not user:
+            return
+        
+        char_id = user.selected_character or 'mia'
+        char = get_character(char_id)
+        
+        # Kredi kontrolu
+        if user.credits < gift['cost'] and not user.is_vip:
+            await query.edit_message_text(
+                f"Kredin yeterli degil tatlim! \U0001f625\n\n"
+                f"Gereken: {gift['cost']} \U0001f48e | Kredin: {user.credits} \U0001f48e\n\n"
+                f"/buy yazarak kredi yukleyebilirsin!\n"
+                f"{char['emoji']} {char['name']}: \"Bana hediye almak istemen bile cok tatli... Ama kredi lazim tatlim \U0001f48b\""
+            )
+            return
+        
+        # Kredi dus
+        if not user.is_vip:
+            user.credits -= gift['cost']
+        session.commit()
+        
+        # Karakter tepkisi
+        reaction = GIFT_REACTIONS.get(char_id, GIFT_REACTIONS["mia"]).get(gift_id, "Tesekkurler!")
+        
+        await query.edit_message_text(
+            f"{gift['emoji']} **{gift['name']} gonderildi!**\n\n"
+            f"{char['emoji']} {char['name']}:\n"
+            f"_{reaction}_\n\n"
+            f"\U0001f48e Kalan kredin: {user.credits}",
+            parse_mode='Markdown'
+        )
+
