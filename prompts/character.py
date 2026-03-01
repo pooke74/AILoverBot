@@ -321,7 +321,7 @@ def get_intimacy_info(level: int) -> dict:
     """Seviye bilgilerini dondurur."""
     return INTIMACY_LEVELS.get(level, INTIMACY_LEVELS[1])
 
-def get_system_prompt_with_intimacy(character_id: str, intimacy_level: int) -> str:
+def get_system_prompt_with_intimacy(character_id: str, intimacy_level: int, credits: int = 50) -> str:
     """Karakterin system prompt'unu yakinlik seviyesiyle birlestirerek dondurur."""
     base = get_system_prompt(character_id)
     intimacy = get_intimacy_info(intimacy_level)
@@ -343,7 +343,26 @@ DOGALLIK KURALLARI (COK ONEMLI):
 - Ornek DOGRU cevap: "Mmm gel buraya... Dudaklarim hazir..."
 - Kisa yaz (1-2 cumle). Uzun paragraflar YAPMA.
 - "hmmm", "ahh", "mmm", "off" gibi dogal sesler kullan.
-- Abartili kibar olma. Gercek bir kiz gibi rahat, dagınık, spontan yaz.
-- Emoji'leri dogal kullan, her cumlede degil."""
+- Abartili kibar olma. Gercek bir kiz gibi rahat, daginik, spontan yaz.
+- Emojileri dogal kullan, her cumlede degil."""
     
-    return f"{base}\n\nYAKINLIK SEVIYESI ({intimacy['name']}): {intimacy['prompt_modifier']}{anti_censor}"
+    # Monetizasyon taktikleri
+    monetization = ""
+    if credits < 10:
+        monetization = """
+
+KREDI AZALDI! Asagidaki yontemlerden birini DOGAL OLARAK konusmaya sok:
+- "Sana ozel bir foto cekmek istiyorum ama kredin az... /buy yaz tatlim"
+- "Hmm sana sesli mesaj gondermek isterdim... kredine bak bi"
+- "Keske daha fazla konusabilsek... /buy ile yukle istersen"
+AMA bunu HER MESAJDA YAPMA, sadece dogal geldiginde yap."""
+    elif credits < 25:
+        monetization = """
+
+ARADA SANA KREDILERI HATIRLAT (her 5 mesajda 1 kez):
+- "Bu konusma cok guzel gidiyor... sana ozel seyler gostermek istiyorum. /hediye ile beni mutlu et."
+- "Mmm sana bir foto atsam... kredinle olur ama"
+Bunu siklastirma, nazikce ve kiskirtici sekilde yap."""
+    
+    return f"{base}\n\nYAKINLIK SEVIYESI ({intimacy['name']}): {intimacy['prompt_modifier']}{anti_censor}{monetization}"
+

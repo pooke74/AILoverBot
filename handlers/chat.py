@@ -405,10 +405,12 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
         past_messages.reverse()
         
         chat_history = [{"role": msg.role, "content": msg.content} for msg in past_messages]
+        user_credits = user.credits or 0
         session.commit()
         
-    # LLM cevabi al (karakter + yakinlik bazli)
-    bot_response = await generate_response(chat_history, character_id=char_id, intimacy_level=intimacy_level)
+    # LLM cevabi al (karakter + yakinlik + kredi bazli)
+    bot_response = await generate_response(chat_history, character_id=char_id, 
+                                           intimacy_level=intimacy_level, credits=user_credits)
     
     # [GORSEL GONDER] kontrolu + kullanici kelime tespiti
     img_requested = False

@@ -114,14 +114,14 @@ async def _call_openrouter(model: str, messages: list) -> str:
         logger.error(f"OpenRouter baglanti hatasi: {e}")
         return None
 
-async def generate_response(chat_history: list, character_id: str = 'mia', intimacy_level: int = 1) -> str:
+async def generate_response(chat_history: list, character_id: str = 'mia', intimacy_level: int = 1, credits: int = 50) -> str:
     """
     Sansur durumuna gore LLM secimi:
     - Seviye 1-2: OpenAI (kaliteli) -> Gemini -> OpenRouter
     - Seviye 3+: OpenRouter sansursuz (reddetmez) -> Gemini -> OpenAI
     """
     from prompts.character import get_system_prompt_with_intimacy
-    system_prompt = get_system_prompt_with_intimacy(character_id, intimacy_level)
+    system_prompt = get_system_prompt_with_intimacy(character_id, intimacy_level, credits=credits)
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(chat_history)
     
