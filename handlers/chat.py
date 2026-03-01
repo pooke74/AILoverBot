@@ -463,7 +463,8 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
                 
                 # Kullanici mesajina gore akilli poz secimi
                 pose_prompt = get_image_pose_prompt(char_id, user_text)
-                img_result = await generate_image(pose_prompt, character_id=char_id, use_raw_prompt=True)
+                img_result = await generate_image(pose_prompt, character_id=char_id, 
+                                                  use_raw_prompt=True, intimacy_level=intimacy_level)
                 
                 if img_result:
                     if not user.is_vip:
