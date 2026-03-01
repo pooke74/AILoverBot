@@ -116,29 +116,57 @@ async def _call_openrouter(model: str, messages: list) -> str:
 
 async def generate_response(chat_history: list, character_id: str = 'mia', intimacy_level: int = 1) -> str:
     """
-    Oncelik sirasi: 1) OpenAI GPT-4o-mini (birincil, sansursuz)  2) Gemini (yedek, ucretsiz)  3) OpenRouter
+    Sansur durumuna gore LLM secimi:
+    - Seviye 1-2: OpenAI (kaliteli) -> Gemini -> OpenRouter
+    - Seviye 3+: OpenRouter sansursuz (reddetmez) -> Gemini -> OpenAI
     """
     from prompts.character import get_system_prompt_with_intimacy
     system_prompt = get_system_prompt_with_intimacy(character_id, intimacy_level)
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(chat_history)
     
-    # 1. OpenAI dene (birincil - daha iyi kalite, daha az sansur)
-    result = await _call_openai(messages)
-    if result:
-        return result
+    # Sansursuz modeller (OpenRouter)
+    uncensored_models = [
+        "nousresearch/hermes-3-llama-3.1-405b:free",
+        "mistralai/mistral-small-3.1-24b-instruct:free",
+        "meta-llama/llama-3.3-70b-instruct:free",
+    ]
     
-    # 2. Gemini dene (yedek, ucretsiz)
-    result = await _call_gemini(messages)
-    if result:
-        return result
-    
-    # 3. OpenRouter modellerini dene
-    all_models = [LLM_MODEL] + LLM_FALLBACK_MODELS
-    for model in all_models:
-        result = await _call_openrouter(model, messages)
+    if intimacy_level >= 3:
+        # YUKSEK SAMIMIYET: Sansursuz model zorunlu
+        # 1. OpenRouter sansursuz modeller
+        for model in uncensored_models:
+            result = await _call_openrouter(model, messages)
+            if result and "üzgünüm" not in result.lower() and "yerine getiremiyorum" not in result.lower():
+                return result
+        
+        # 2. Gemini dene
+        result = await _call_gemini(messages)
+        if result and "üzgünüm" not in result.lower():
+            return result
+        
+        # 3. OpenAI son care
+        result = await _call_openai(messages)
+        if result and "üzgünüm" not in result.lower():
+            return result
+    else:
+        # DUSUK SAMIMIYET: Normal sira
+        # 1. OpenAI (en kaliteli)
+        result = await _call_openai(messages)
         if result:
             return result
+        
+        # 2. Gemini (ucretsiz)
+        result = await _call_gemini(messages)
+        if result:
+            return result
+        
+        # 3. OpenRouter
+        for model in uncensored_models:
+            result = await _call_openrouter(model, messages)
+            if result:
+                return result
     
     logger.error("Tum LLM servisleri basarisiz oldu!")
     return "Simdi biraz mesgulum, birazdan tekrar yaz bana..."
+
