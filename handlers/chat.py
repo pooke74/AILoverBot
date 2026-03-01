@@ -415,10 +415,10 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
         
         chat_history = [{"role": msg.role, "content": msg.content} for msg in past_messages]
         user_credits = user.credits or 0
+        is_sexting = getattr(user, 'is_sexting', False)
         session.commit()
         
     # LLM cevabi al (karakter + yakinlik + kredi bazli)
-    is_sexting = getattr(user, 'is_sexting', False)
     bot_response = await generate_response(chat_history, character_id=char_id, 
                                            intimacy_level=intimacy_level, credits=user_credits,
                                            is_sexting=is_sexting)
