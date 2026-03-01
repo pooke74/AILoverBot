@@ -35,6 +35,9 @@ class User(Base):
     referred_by = Column(String, nullable=True)            # Kim davet etti
     referral_count = Column(Integer, default=0)            # Kac kisi davet etti
     
+    # Sexting Modu
+    is_sexting = Column(Boolean, default=False)            # Sexting modu aktif mi?
+    
     messages = relationship("Message", back_populates="user")
 
 class Message(Base):

@@ -1,5 +1,6 @@
 import os
 import random
+import asyncio
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
@@ -383,6 +384,14 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
         user_msg = Message(user_id=user.id, role='user', content=user_text, character_id=char_id)
         session.add(user_msg)
         
+        # Sexting Kredi Kontrolu (Ekstra 2 kredi, toplam 3)
+        if hasattr(user, 'is_sexting') and user.is_sexting:
+            if not user.is_vip and user.credits < 3:
+                user.is_sexting = False
+                await update.message.reply_text("Kredin bitti tatlim, sexting modundan cikiyorum... /buy yaz geri gel \U0001f625")
+            elif not user.is_vip:
+                user.credits -= 2
+        
         # Kredi/gunluk hak dus
         if not user.is_vip:
             if has_daily_free:
@@ -409,8 +418,15 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
         session.commit()
         
     # LLM cevabi al (karakter + yakinlik + kredi bazli)
+    is_sexting = getattr(user, 'is_sexting', False)
     bot_response = await generate_response(chat_history, character_id=char_id, 
-                                           intimacy_level=intimacy_level, credits=user_credits)
+                                           intimacy_level=intimacy_level, credits=user_credits,
+                                           is_sexting=is_sexting)
+    
+    # Gercekci typing suresi (Metin uzunluguna gore bekle)
+    delay = min(4.0, len(bot_response) / 30)
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
+    await asyncio.sleep(delay)
     
     # [GORSEL GONDER] kontrolu + kullanici kelime tespiti
     img_requested = False
@@ -427,6 +443,15 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
                        "fotografini", "yuzunu goster", "kiyafetini goster"]
     if any(kw in user_text.lower() for kw in photo_keywords):
         img_requested = True
+    
+    # Karsiliksiz (Surpriz) Fotograf Ihtimali
+    if not img_requested:
+        has_photo_chance = is_sexting or (intimacy_level >= 3)
+        photo_prob = 0.10 if is_sexting else 0.04
+        if has_photo_chance and random.random() < photo_prob:
+            img_requested = True
+            user_text = "surpriz sexy foto" # Poz secimi icin kelime
+            bot_response = "Sana ozel bir sey atiyorum tatlim... \U0001f525\n" + bot_response
 
     with SessionLocal() as db_session:
         user = get_or_create_user(db_session, update.effective_user)
@@ -495,6 +520,37 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
                 f"\u2728 **Seviye Atladin!**\n\n"
                 f"{level_bar} Artik **{info['name']}** seviyesindesin!\n"
                 f"_{info['prompt_modifier'][:80]}_",
+        )
+
+async def sexting_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/sexting komutu - limitsiz cinsel rol yapma modunu acar/kapatir. (Mesaj basi 3 kredi)"""
+    with SessionLocal() as session:
+        user = get_or_create_user(session, update.effective_user)
+        
+        # Sadece Seviye 3+ veya VIP'ler kullanabilir
+        if not user.is_vip and (user.intimacy_level or 1) < 3:
+            char = get_character(user.selected_character or 'mia')
+            await update.message.reply_text(
+                f"{char['emoji']} {char['name']}: Tatlim, bunun icin henuz yeterince yakin degiliz... Biraz daha konusalim \U0001f60f"
+            )
+            return
+            
+        # Toggle
+        user.is_sexting = not user.is_sexting
+        session.commit()
+        
+        char = get_character(user.selected_character or 'mia')
+        if user.is_sexting:
+            await update.message.reply_text(
+                f"\U0001f525 **SEXTING MODU ACIK** \U0001f525\n\n"
+                f"{char['emoji']} {char['name']}: Demek oyle oynamak istiyorsun... Tamam patron, hazirim \U0001f608\n\n"
+                f"_(Bu mod'da her mesaj 3 kredi harcar. Kapatmak icin tekrar /sexting yazin)_",
+                parse_mode='Markdown'
+            )
+        else:
+            await update.message.reply_text(
+                f"\U0001f512 **SEXTING MODU KAPALI**\n\n"
+                f"{char['emoji']} {char['name']}: Normal konusalim şimdilik... \U0001f60c",
                 parse_mode='Markdown'
             )
 

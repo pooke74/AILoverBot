@@ -13,6 +13,7 @@ async def update_commands():
                 {"command": "profile", "description": "Profilim"},
                 {"command": "buy", "description": "Kredi yukle"},
                 {"command": "davet", "description": "Arkadas davet et"},
+                {"command": "sexting", "description": "Sexting Modu (+18)"},
                 {"command": "help", "description": "Yardim"},
             ]
         })

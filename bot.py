@@ -8,7 +8,7 @@ from handlers.chat import (
     handle_message, handle_voice,
     characters_command, switch_character_command,
     menu_command, menu_callback, referral_command,
-    gift_command, gift_callback
+    gift_command, gift_callback, sexting_command
 )
 from handlers.payment import buy_command, button_callback, precheckout_callback, successful_payment_callback
 from services.proactive_service import check_and_send_proactive_messages
@@ -60,6 +60,7 @@ def main():
     application.add_handler(CommandHandler('karakter', switch_character_command))
     application.add_handler(CommandHandler('davet', referral_command))
     application.add_handler(CommandHandler('hediye', gift_command))
+    application.add_handler(CommandHandler('sexting', sexting_command))
     
     # ===== ODEME ISLEYICILERI =====
     application.add_handler(PreCheckoutQueryHandler(precheckout_callback))
