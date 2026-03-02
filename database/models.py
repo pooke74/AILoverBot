@@ -38,6 +38,11 @@ class User(Base):
     # Sexting Modu
     is_sexting = Column(Boolean, default=False)            # Sexting modu aktif mi?
     
+    # Kisisellestirme (Sprint 3)
+    custom_persona_active = Column(Boolean, default=False)
+    custom_persona_name = Column(String, nullable=True)
+    custom_persona_prompt = Column(Text, nullable=True)
+    
     messages = relationship("Message", back_populates="user")
 
 class Message(Base):

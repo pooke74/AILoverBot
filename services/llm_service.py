@@ -114,14 +114,21 @@ async def _call_openrouter(model: str, messages: list) -> str:
         logger.error(f"OpenRouter baglanti hatasi: {e}")
         return None
 
-async def generate_response(chat_history: list, character_id: str = 'mia', intimacy_level: int = 1, credits: int = 50, is_sexting: bool = False) -> str:
+async def generate_response(chat_history: list, character_id: str = 'mia', intimacy_level: int = 1, credits: int = 50, is_sexting: bool = False, custom_name: str = None, custom_prompt: str = None) -> str:
     """
     Sansur durumuna gore LLM secimi:
     - Seviye 1-2: OpenAI (kaliteli) -> Gemini -> OpenRouter
     - Seviye 3+: OpenRouter sansursuz (reddetmez) -> Gemini -> OpenAI
     """
     from prompts.character import get_system_prompt_with_intimacy
-    system_prompt = get_system_prompt_with_intimacy(character_id, intimacy_level, credits=credits, is_sexting=is_sexting)
+    system_prompt = get_system_prompt_with_intimacy(
+        character_id, 
+        intimacy_level, 
+        credits=credits, 
+        is_sexting=is_sexting,
+        custom_name=custom_name,
+        custom_prompt=custom_prompt
+    )
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(chat_history)
     

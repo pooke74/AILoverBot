@@ -443,13 +443,40 @@ PHOTO_TYPE_KEYWORDS = {
     "outdoor": ["disari", "sokak", "parka", "deniz", "havuz"],
 }
 
-def get_character(character_id: str) -> dict:
+def get_custom_character_dict(user=None) -> dict:
+    name = "Özel Karakter"
+    if user and getattr(user, 'custom_persona_name', None):
+        name = user.custom_persona_name
+        
+    return {
+        "name": name,
+        "emoji": "✨",
+        "age": "?",
+        "description": "Senin yaratıcılığının eseri olan özel partnerin.",
+        "system_prompt": user.custom_persona_prompt if user and getattr(user, 'custom_persona_prompt', None) else "Sen özel bir AI partnersin.",
+        "image_base_prompt": f"Photorealistic portrait photo of an attractive person. Natural lighting.",
+        "image_poses": {
+            "selfie": "taking a selfie, looking at camera",
+        },
+        "proactive_messages": [
+            "Seni düşünüyorum...",
+            "Neredesin, yalnız kaldım...",
+            "Bana bir şeyler yazmaz mısın?"
+        ]
+    }
+
+def get_character(character_id: str, user=None) -> dict:
     """Karakter bilgilerini dondurur. Bulunamazsa 'mia' doner."""
+    if character_id == 'custom':
+        return get_custom_character_dict(user=user)
     return CHARACTERS.get(character_id, CHARACTERS['mia'])
 
-def get_system_prompt(character_id: str) -> str:
+def get_system_prompt(character_id: str, custom_prompt: str = None) -> str:
     """Karakterin system prompt'unu dondurur."""
-    return get_character(character_id)['system_prompt']
+    if character_id == 'custom' and custom_prompt:
+        base_instruct = f"Kullanıcı özel bir karakter yarattı. Lütfen tamamen şu özelliklere bürün:\n\n{custom_prompt}\n\nMevcut konuşmalarını kesinlikle bu persona üzerinden sürdür. Hiçbir zaman dışına çıkma."
+        return base_instruct
+    return get_character(character_id).get('system_prompt', '')
 
 def get_image_base_prompt(character_id: str) -> str:
     """Karakterin gorsel uretme temel prompt'unu dondurur."""
@@ -526,10 +553,10 @@ def get_intimacy_info(level: int) -> dict:
     """Seviye bilgilerini dondurur."""
     return INTIMACY_LEVELS.get(level, INTIMACY_LEVELS[1])
 
-def get_system_prompt_with_intimacy(character_id: str, intimacy_level: int, credits: int = 50, is_sexting: bool = False) -> str:
+def get_system_prompt_with_intimacy(character_id: str, intimacy_level: int, credits: int = 50, is_sexting: bool = False, custom_name: str = None, custom_prompt: str = None) -> str:
     """Karakterin system prompt'unu yakinlik seviyesiyle birlestirerek dondurur."""
     from datetime import datetime
-    base = get_system_prompt(character_id)
+    base = get_system_prompt(character_id, custom_prompt=custom_prompt)
     intimacy = get_intimacy_info(intimacy_level)
     
     anti_censor = """

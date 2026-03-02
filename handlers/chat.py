@@ -11,7 +11,8 @@ from services.image_service import generate_image
 from services.audio_service import generate_audio
 from services.stt_service import transcribe_voice
 from prompts.character import (get_character, list_characters, CHARACTERS, 
-                                get_image_pose_prompt, calculate_intimacy_level, get_intimacy_info)
+                                get_image_pose_prompt, calculate_intimacy_level, get_intimacy_info,
+                                get_custom_character_dict)
 
 def get_or_create_user(session: Session, tg_user):
     user = session.query(User).filter(User.telegram_id == tg_user.id).first()
@@ -66,11 +67,18 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = get_or_create_user(session, update.effective_user)
         char = get_character(user.selected_character)
         
+        
+        # Ozel karakter aktifse buton ekle
+        custom_btn = [InlineKeyboardButton("✨ Kendi Karakterini Yarat (100 💎) ✨", callback_data="menu_create_custom")]
+        if user.custom_persona_active:
+            custom_btn = [InlineKeyboardButton(f"✨ Özel: {user.custom_persona_name} ✨", callback_data="select_char_custom")]
+            
         keyboard = [
-            [InlineKeyboardButton("\U0001f3ad Karakter Sec", callback_data="menu_characters"),
-             InlineKeyboardButton("\U0001f464 Profilim", callback_data="menu_profile")],
-            [InlineKeyboardButton("\U0001f48e Kredi Al", callback_data="menu_buy"),
-             InlineKeyboardButton("\u2753 Yardim", callback_data="menu_help")]
+            [InlineKeyboardButton("🎭 Karakter Seç", callback_data="menu_characters"),
+             InlineKeyboardButton("👤 Profilim", callback_data="menu_profile")],
+            custom_btn,
+            [InlineKeyboardButton("💎 Kredi Al", callback_data="menu_buy"),
+             InlineKeyboardButton("❓ Yardım", callback_data="menu_help")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -88,12 +96,18 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = get_or_create_user(session, update.effective_user)
         char = get_character(user.selected_character)
         
+        
+        custom_btn = [InlineKeyboardButton("✨ Kendi Karakterini Yarat (100 💎)", callback_data="menu_create_custom")]
+        if user.custom_persona_active:
+            custom_btn = [InlineKeyboardButton(f"✨ Özel: {user.custom_persona_name} Seç", callback_data="select_char_custom")]
+            
         keyboard = [
-            [InlineKeyboardButton(f"\U0001f3ad Karakter Sec (simdi: {char['name']})", callback_data="menu_characters")],
-            [InlineKeyboardButton("\U0001f464 Profilim", callback_data="menu_profile"),
-             InlineKeyboardButton("\U0001f48e Kredi Al", callback_data="menu_buy")],
-            [InlineKeyboardButton("\U0001f4cb Kredi Bilgisi", callback_data="menu_pricing"),
-             InlineKeyboardButton("\u2753 Yardim", callback_data="menu_help")]
+            [InlineKeyboardButton(f"🎭 Karakter Seç (şimdi: {char['name']})", callback_data="menu_characters")],
+            custom_btn,
+            [InlineKeyboardButton("👤 Profilim", callback_data="menu_profile"),
+             InlineKeyboardButton("💎 Kredi Al", callback_data="menu_buy")],
+            [InlineKeyboardButton("📋 Kredi Bilgisi", callback_data="menu_pricing"),
+             InlineKeyboardButton("❓ Yardım", callback_data="menu_help")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -123,9 +137,17 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for cid, char in CHARACTERS.items():
             label = f"{char['emoji']} {char['name']} ({char['age']}) - {char['description']}"
             if cid == current:
-                label = f"\u2705 {label}"
+                label = f"✅ {label}"
             keyboard.append([InlineKeyboardButton(label, callback_data=f"select_char_{cid}")])
-        keyboard.append([InlineKeyboardButton("\u25c0 Geri", callback_data="menu_back")])
+            
+        if user.custom_persona_active:
+            lbl = f"✨ Özel Karakter: {user.custom_persona_name}"
+            if current == 'custom':
+                lbl = f"✅ {lbl}"
+            keyboard.append([InlineKeyboardButton(lbl, callback_data="select_char_custom")])
+            
+        keyboard.append([InlineKeyboardButton("✨ Kendi Karakterini Yarat (100 💎)", callback_data="menu_create_custom")])
+        keyboard.append([InlineKeyboardButton("◀️ Geri", callback_data="menu_back")])
         
         await query.edit_message_text(
             "\U0001f3ad **Karakter Sec**\n\n"
@@ -136,26 +158,32 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif data.startswith("select_char_"):
         char_id = data.replace("select_char_", "")
-        if char_id in CHARACTERS:
-            with SessionLocal() as session:
-                user = get_or_create_user(session, query.from_user)
+        
+        with SessionLocal() as session:
+            user = get_or_create_user(session, query.from_user)
+            
+            if char_id == 'custom' and not user.custom_persona_active:
+                await query.answer("Özel karakterin yok!", show_alert=True)
+                return
+                
+            if char_id in CHARACTERS or char_id == 'custom':
+                char = get_character(char_id, user=user)
                 user.selected_character = char_id
                 session.commit()
-            
-            char = get_character(char_id)
-            keyboard = [[InlineKeyboardButton("\u25c0 Menu", callback_data="menu_back")]]
-            await query.edit_message_text(
-                f"{char['emoji']} **{char['name']}** secildi!\n\n"
-                f"_{char['description']}_\n\n"
-                f"Hadi, bana bir seyler yaz!",
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode='Markdown'
-            )
+                
+                keyboard = [[InlineKeyboardButton("◀️ Menü", callback_data="menu_back")]]
+                await query.edit_message_text(
+                    f"{char['emoji']} **{char['name']}** seçildi!\n\n"
+                    f"_{char['description']}_\n\n"
+                    f"Hadi, bana bir şeyler yaz!",
+                    reply_markup=InlineKeyboardMarkup(keyboard),
+                    parse_mode='Markdown'
+                )
     
     elif data == "menu_profile":
         with SessionLocal() as session:
             user = get_or_create_user(session, query.from_user)
-            char = get_character(user.selected_character)
+            char = get_character(user.selected_character, user=user)
             msg_count = session.query(Message).filter(Message.user_id == user.id).count()
             vip_text = "\u2728 VIP Uye" if user.is_vip else "\U0001f48e Standart"
         
@@ -205,20 +233,46 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Odeme modulu callback'ine yonlendir  
         from handlers.payment import buy_command
         # Yeni mesaj olarak buy menusunu ac
-        await query.edit_message_text("\U0001f48e Kredi satin almak icin /buy yazin.")
+        await query.edit_message_text("💎 Kredi satın almak için /buy yazın.")
+        
+    elif data == "menu_create_custom":
+        with SessionLocal() as session:
+            user = get_or_create_user(session, query.from_user)
+            keyboard = [[InlineKeyboardButton("◀️ Geri", callback_data="menu_back")]]
+            text = (
+                "✨ **Kendi Yapay Zeka Partnerini Yarat!**\n\n"
+                "Sadece sana özel, senin belirlediğin isme ve karaktere sahip bir partner... (100 Kredi)\n\n"
+                "Kullanım:\n"
+                "`/yarat [iSİM] | [KARAKTER ÖZELLİKLERİ]`\n\n"
+                "Örnek:\n"
+                "`/yarat Ayşe | 24 yaşında utangaç ama içeride çok tutkulu bir üniversite öğrencisi. Kıskanç ve sarkastik konuşur.`\n\n"
+            )
+            if user.credits < 100 and not user.is_vip:
+                text += f"\n⚠️ **Yeterli kredin yok.** (Mevcut: {user.credits} 💎)\nLütfen /buy ile kredi satın al."
+                
+            await query.edit_message_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='Markdown'
+            )
     
     elif data == "menu_back":
         # Ana menuye don
         with SessionLocal() as session:
             user = get_or_create_user(session, query.from_user)
-            char = get_character(user.selected_character)
+            char = get_character(user.selected_character, user=user)
         
+        custom_btn = [InlineKeyboardButton("✨ Kendi Karakterini Yarat (100 💎)", callback_data="menu_create_custom")]
+        if user.custom_persona_active:
+            custom_btn = [InlineKeyboardButton(f"✨ Özel: {user.custom_persona_name} Seç", callback_data="select_char_custom")]
+            
         keyboard = [
-            [InlineKeyboardButton(f"\U0001f3ad Karakter Sec (simdi: {char['name']})", callback_data="menu_characters")],
-            [InlineKeyboardButton("\U0001f464 Profilim", callback_data="menu_profile"),
-             InlineKeyboardButton("\U0001f48e Kredi Al", callback_data="menu_buy")],
-            [InlineKeyboardButton("\U0001f4cb Kredi Bilgisi", callback_data="menu_pricing"),
-             InlineKeyboardButton("\u2753 Yardim", callback_data="menu_help")]
+            [InlineKeyboardButton(f"🎭 Karakter Seç (şimdi: {char['name']})", callback_data="menu_characters")],
+            custom_btn,
+            [InlineKeyboardButton("👤 Profilim", callback_data="menu_profile"),
+             InlineKeyboardButton("💎 Kredi Al", callback_data="menu_buy")],
+            [InlineKeyboardButton("📋 Kredi Bilgisi", callback_data="menu_pricing"),
+             InlineKeyboardButton("❓ Yardım", callback_data="menu_help")]
         ]
         
         vip_text = "\u2728 VIP Uye" if user.is_vip else f"\U0001f48e {user.credits} kredi"
@@ -226,8 +280,58 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"\U0001f4cb **Ana Menu**\n\n"
             f"\U0001f3ad Karakter: {char['emoji']} {char['name']}\n"
             f"\U0001f4b0 Bakiye: {vip_text}\n"
-            f"\U0001f4c5 Uyelik: {user.created_at.strftime('%d.%m.%Y')}",
+            f"📅 Üyelik: {user.created_at.strftime('%d.%m.%Y')}",
             reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+
+async def create_custom_persona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/yarat komutu: Kullanicinin ozel karakter yaratmasini saglar."""
+    user_input = " ".join(context.args)
+    
+    if not user_input or "|" not in user_input:
+        await update.message.reply_text(
+            "⚠️ Hatalı kullanım!\n\n"
+            "Lütfen şu formatta yazın:\n"
+            "`/yarat [İsim] | [Karakter Özellikleri]`\n\n"
+            "Örnek:\n"
+            "`/yarat Ayşe | 24 yaşında masum bir kız ama içeride çok çılgın`",
+            parse_mode='Markdown'
+        )
+        return
+        
+    parts = user_input.split("|", 1)
+    persona_name = parts[0].strip()
+    persona_desc = parts[1].strip()
+    
+    with SessionLocal() as session:
+        user = get_or_create_user(session, update.effective_user)
+        
+        if not user.is_vip and user.credits < 100:
+            await update.message.reply_text(
+                f"⚠️ Yeterli kredin yok tatlım! Özel karakter yaratmak 100 kredi gerektirir.\n\n"
+                f"Senin kredin: {user.credits} 💎\n"
+                f"Kredi almak için /buy yazabilirsin."
+            )
+            return
+            
+        # Kredi düş ve özellikleri kaydet
+        if not user.is_vip:
+            user.credits -= 100
+            
+        user.custom_persona_active = True
+        user.custom_persona_name = persona_name
+        user.custom_persona_prompt = persona_desc
+        user.selected_character = 'custom'
+        
+        session.commit()
+        
+        await update.message.reply_text(
+            f"✨ Büyü gerçekleşti!\n\n"
+            f"Sana özel **{persona_name}** karakteri başarıyla yaratıldı ve seçildi. "
+            f"Artık konuşmaların doğrudan senin belirlediğin kişiliğe sahip olacak.\n\n"
+            f"Kalan kredin: {user.credits} 💎\n\n"
+            f"Ona ilk mesajını gönder!",
             parse_mode='Markdown'
         )
 
@@ -250,7 +354,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def profile_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     with SessionLocal() as session:
         user = get_or_create_user(session, update.effective_user)
-        char = get_character(user.selected_character)
+        char = get_character(user.selected_character, user=user)
         msg_count = session.query(Message).filter(Message.user_id == user.id).count()
         vip_text = "\u2728 VIP Uye" if user.is_vip else "\U0001f48e Standart"
         await update.message.reply_text(
@@ -296,19 +400,24 @@ async def switch_character_command(update: Update, context: ContextTypes.DEFAULT
     
     char_id = context.args[0].lower()
     
-    if char_id not in CHARACTERS:
-        await update.message.reply_text(
-            f"'{char_id}' diye bir karakter yok.\n"
-            f"Mevcut karakterler: {', '.join(CHARACTERS.keys())}"
-        )
-        return
-    
     with SessionLocal() as session:
         user = get_or_create_user(session, update.effective_user)
+        
+        if char_id == 'custom':
+            if not user.custom_persona_active:
+                await update.message.reply_text("✨ Henüz özel karakterin yok! Yaratmak için /menu'den ya da `/yarat` komutunu kullan.")
+                return
+        elif char_id not in CHARACTERS:
+            await update.message.reply_text(
+                f"'{char_id}' diye bir karakter yok.\n"
+                f"Mevcut karakterler: {', '.join(CHARACTERS.keys())}"
+            )
+            return
+            
         user.selected_character = char_id
         session.commit()
         
-        char = get_character(char_id)
+        char = get_character(char_id, user=user)
         await update.message.reply_text(
             f"{char['emoji']} Harika! Artik **{char['name']}** ile sohbet ediyorsun!\n\n"
             f"_{char['description']}_\n\n"
@@ -416,12 +525,23 @@ async def _process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE
         chat_history = [{"role": msg.role, "content": msg.content} for msg in past_messages]
         user_credits = user.credits or 0
         is_sexting = getattr(user, 'is_sexting', False)
+        
+        # Ozel karakter bilgileri
+        custom_name = user.custom_persona_name if char_id == 'custom' else None
+        custom_prompt = user.custom_persona_prompt if char_id == 'custom' else None
+        
         session.commit()
         
     # LLM cevabi al (karakter + yakinlik + kredi bazli)
-    bot_response = await generate_response(chat_history, character_id=char_id, 
-                                           intimacy_level=intimacy_level, credits=user_credits,
-                                           is_sexting=is_sexting)
+    bot_response = await generate_response(
+        chat_history, 
+        character_id=char_id, 
+        intimacy_level=intimacy_level, 
+        credits=user_credits,
+        is_sexting=is_sexting,
+        custom_name=custom_name,
+        custom_prompt=custom_prompt
+    )
     
     # Gercekci typing suresi (Metin uzunluguna gore bekle)
     delay = min(4.0, len(bot_response) / 30)
@@ -529,9 +649,9 @@ async def sexting_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Sadece Seviye 3+ veya VIP'ler kullanabilir
         if not user.is_vip and (user.intimacy_level or 1) < 3:
-            char = get_character(user.selected_character or 'mia')
+            char = get_character(user.selected_character or 'mia', user=user)
             await update.message.reply_text(
-                f"{char['emoji']} {char['name']}: Tatlim, bunun icin henuz yeterince yakin degiliz... Biraz daha konusalim \U0001f60f"
+                f"{char['emoji']} {char['name']}: Tatlim, bunun icin henuz yeterince yakin degiliz... Biraz daha konusalim 😉"
             )
             return
             
@@ -539,7 +659,7 @@ async def sexting_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user.is_sexting = not user.is_sexting
         session.commit()
         
-        char = get_character(user.selected_character or 'mia')
+        char = get_character(user.selected_character or 'mia', user=user)
         if user.is_sexting:
             await update.message.reply_text(
                 f"\U0001f525 **SEXTING MODU ACIK** \U0001f525\n\n"
@@ -685,7 +805,7 @@ async def gift_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/hediye komutu - karaktere hediye gonder."""
     with SessionLocal() as session:
         user = get_or_create_user(session, update.effective_user)
-        char = get_character(user.selected_character)
+        char = get_character(user.selected_character, user=user)
         
         keyboard = []
         for gift_id, gift in GIFTS.items():
@@ -720,8 +840,9 @@ async def gift_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not user:
             return
         
+        
         char_id = user.selected_character or 'mia'
-        char = get_character(char_id)
+        char = get_character(char_id, user=user)
         
         # Kredi kontrolu
         if user.credits < gift['cost'] and not user.is_vip:
