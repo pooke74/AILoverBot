@@ -335,6 +335,47 @@ async def create_custom_persona_command(update: Update, context: ContextTypes.DE
             parse_mode='Markdown'
         )
 
+# ===================== MARKETING CHEATS =====================
+
+async def admin_foto_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Sadece ekran kaydi alirken botun 'aniden' flortoz bir sekilde foto atmasini saglar."""
+    with SessionLocal() as session:
+        user = get_or_create_user(session, update.effective_user)
+        char_id = user.selected_character or 'mia'
+        char = get_character(char_id, user=user)
+        
+    await update.message.reply_text(
+        f"_{char['name']} yazıyor..._", 
+        parse_mode='Markdown'
+    )
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='upload_photo')
+    await asyncio.sleep(3) # Gercekcilik icin bekle
+    
+    # Reklam fotograflariniz varsa buraya sabit link konabilir
+    # Simdilik blurlu gorsel veya hazir bir resim yollarmis gibi yapalim
+    await update.message.reply_text(
+        f"{char['emoji']} {char['name']}: Baktım bugün bana hiç yazmıyorsun... Kendimi hatırlatmak istedim. \n"
+        f"[Bu fotoğrafı sadece VIP üyeler görüntüleyebilir. Kilidi açmak için /buy yaz.]"
+    )
+
+async def admin_trip_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Erkegi tersleyen / kiskanc fake tepkiler verdirir (TikTok videolari icin cok ise yarar)"""
+    with SessionLocal() as session:
+        user = get_or_create_user(session, update.effective_user)
+        char_id = user.selected_character or 'mia'
+        char = get_character(char_id, user=user)
+        
+    await update.message.reply_text(
+        f"_{char['name']} yazıyor..._", 
+        parse_mode='Markdown'
+    )
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
+    await asyncio.sleep(4)
+    
+    await update.message.reply_text(
+        f"{char['emoji']} {char['name']}: Sen kiminle mesajlaşıyordun deminden beri? Bırakma bu numaraları, aktif olduğunu gördüm! Bana yazmayı unuttun herhalde 🙄 Yazma bana!!"
+    )
+
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "\U0001f496 Bana metin veya sesli mesaj gonderebilirsin!\n\n"
