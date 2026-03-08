@@ -100,6 +100,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"Toplam kredin: {user.credits} \U0001f48e\n\n"
                     f"{char['emoji']} {char['name']}: \"{PAYMENT_REACTIONS.get(user.selected_character, 'Tesekkurler!')}\""
                 )
+                from utils import send_admin_alert
+                await send_admin_alert(
+                    context,
+                    f"🔬 *Test Kredisi Alındı!*\n👤 Kullanıcı: {user.first_name} (`{user.telegram_id}`)\n💎 Miktar: 50 Kredi"
+                )
         return
     
     # Geri butonu
@@ -208,6 +213,12 @@ async def successful_payment_callback(update: Update, context: ContextTypes.DEFA
                 f"Toplam kredin: {user.credits} \U0001f48e\n\n"
                 f"{char['emoji']} _{reaction}_",
                 parse_mode='Markdown'
+            )
+            
+            from utils import send_admin_alert
+            await send_admin_alert(
+                context,
+                f"💰 *Yeni Ödeme Alındı!* (Stars)\n👤 Kullanıcı: {user.first_name} (`{user.telegram_id}`)\n💎 Miktar: {credits_amount} Kredi"
             )
     
     logger.info(f"Basarili odeme: user={update.effective_user.id}, credits={credits_amount}, vip={is_vip}")

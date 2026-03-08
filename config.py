@@ -11,6 +11,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")  # Whisper STT için
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")  # Gemini LLM (birincil)
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///ailover.db")
 PAYMENT_PROVIDER_TOKEN = os.getenv("PAYMENT_PROVIDER_TOKEN", "")  # Telegram Stars
+ADMIN_TELEGRAM_ID = os.getenv("ADMIN_TELEGRAM_ID", "")  # Senin telegram ID'n
 
 # LLM Ayarları
 LLM_MODEL = "meta-llama/llama-3.2-3b-instruct:free"

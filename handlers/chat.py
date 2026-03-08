@@ -63,9 +63,20 @@ def _credit_footer(user) -> str:
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Gelistirilmis /start - inline butonlu karsilama."""
+    from utils import send_admin_alert
+    
     with SessionLocal() as session:
+        existing_user = session.query(User).filter(User.telegram_id == update.effective_user.id).first()
+        is_new = existing_user is None
+        
         user = get_or_create_user(session, update.effective_user)
         char = get_character(user.selected_character)
+        
+        if is_new:
+            await send_admin_alert(
+                context, 
+                f"🔔 *Yeni Kullanici Katildi!*\n👤 Isim: {user.first_name}\n💭 ID: `{user.telegram_id}`\n🌐 K.adi: @{user.username or 'Yok'}"
+            )
         
         
         # Ozel karakter aktifse buton ekle
