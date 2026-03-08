@@ -40,8 +40,11 @@ async def buy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         label = f"{pkg['label']} - {pkg['stars']}\u2b50{popular}"
         keyboard.append([InlineKeyboardButton(label, callback_data=f"buy_{pkg['id']}")])
     
-    keyboard.append([InlineKeyboardButton("\U0001f9ea Test: Ucretsiz 50 Kredi", callback_data="buy_test_50")])
-    keyboard.append([InlineKeyboardButton("\u20bf Kripto ile Ode (USDT)", callback_data="buy_crypto_info")])
+    from config import ADMIN_TELEGRAM_ID
+    if str(update.effective_user.id) == str(ADMIN_TELEGRAM_ID):
+        keyboard.append([InlineKeyboardButton("🧪 Test: Ücretsiz 50 Kredi (Admin)", callback_data="buy_test_50")])
+        
+    keyboard.append([InlineKeyboardButton("₿ Kripto ile Öde (USDT)", callback_data="buy_crypto_info")])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -85,6 +88,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Test modu (ucretsiz kredi)
     if data == "buy_test_50":
+        from config import ADMIN_TELEGRAM_ID
+        if str(update.effective_user.id) != str(ADMIN_TELEGRAM_ID):
+            await query.answer("Bu buton sadece admin içindir!", show_alert=True)
+            return
+            
         with SessionLocal() as session:
             user = session.query(User).filter(User.telegram_id == update.effective_user.id).first()
             if user:
@@ -119,8 +127,12 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             popular = " \u2b50 EN POPULER" if pkg.get("popular") else ""
             label = f"{pkg['label']} - {pkg['stars']}\u2b50{popular}"
             keyboard.append([InlineKeyboardButton(label, callback_data=f"buy_{pkg['id']}")])
-        keyboard.append([InlineKeyboardButton("\U0001f9ea Test: Ucretsiz 50 Kredi", callback_data="buy_test_50")])
-        keyboard.append([InlineKeyboardButton("\u20bf Kripto ile Ode (USDT)", callback_data="buy_crypto_info")])
+            
+        from config import ADMIN_TELEGRAM_ID
+        if str(update.effective_user.id) == str(ADMIN_TELEGRAM_ID):
+            keyboard.append([InlineKeyboardButton("🧪 Test: Ücretsiz 50 Kredi (Sadece Admin)", callback_data="buy_test_50")])
+            
+        keyboard.append([InlineKeyboardButton("₿ Kripto ile Öde (USDT)", callback_data="buy_crypto_info")])
         
         await query.edit_message_text(
             "\U0001f48e **Kredi Yukle**\n\n"
