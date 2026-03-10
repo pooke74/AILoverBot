@@ -1,630 +1,217 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AILoverBot - Yapay Zeka Sevgilin</title>
-    <meta name="description" content="Telegram'da yapay zeka sevgilinle sohbet et, sesli mesaj gönder, fotoğraf al. 4 farklı karakter, 7/24 seninle.">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <title>Gizli Kulüp 🔥</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        :root {
-            --bg-dark: #0a0a0f;
-            --bg-card: #12121a;
-            --bg-card-hover: #1a1a2e;
-            --accent: #e91e63;
-            --accent-glow: rgba(233, 30, 99, 0.3);
-            --accent-light: #ff4081;
-            --text: #f0f0f5;
-            --text-dim: #8888a0;
-            --purple: #9c27b0;
-            --gold: #ffd700;
-            --gradient: linear-gradient(135deg, #e91e63, #9c27b0);
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
             font-family: 'Inter', sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            overflow-x: hidden;
-            line-height: 1.6;
-        }
-
-        /* ===== HERO ===== */
-        .hero {
             min-height: 100vh;
+            background: #0a0a0a;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            text-align: center;
-            position: relative;
-            padding: 40px 20px;
+            overflow: hidden;
         }
 
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: 
-                radial-gradient(ellipse at 20% 50%, rgba(233,30,99,0.15) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 20%, rgba(156,39,176,0.15) 0%, transparent 50%),
-                radial-gradient(ellipse at 50% 80%, rgba(233,30,99,0.1) 0%, transparent 50%);
+        .bg-glow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 30%, rgba(139, 0, 255, 0.15), transparent 60%),
+                radial-gradient(circle at 80% 80%, rgba(255, 0, 80, 0.1), transparent 50%);
             z-index: 0;
         }
 
-        .hero > * { position: relative; z-index: 1; }
-
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 20px;
-            background: rgba(233,30,99,0.1);
-            border: 1px solid rgba(233,30,99,0.3);
-            border-radius: 50px;
-            font-size: 14px;
-            color: var(--accent-light);
-            margin-bottom: 32px;
-            animation: pulse-badge 3s infinite;
+        .container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 40px 24px;
+            max-width: 420px;
+            width: 100%;
         }
 
-        @keyframes pulse-badge {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(233,30,99,0.2); }
-            50% { box-shadow: 0 0 20px 5px rgba(233,30,99,0.1); }
+        .badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #aaa;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 6px 16px;
+            border-radius: 20px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 24px;
         }
 
-        .hero h1 {
-            font-size: clamp(48px, 8vw, 90px);
+        h1 {
+            color: #fff;
+            font-size: 28px;
             font-weight: 900;
-            background: var(--gradient);
+            line-height: 1.3;
+            margin-bottom: 12px;
+        }
+
+        h1 span {
+            background: linear-gradient(135deg, #ff006e, #8b00ff);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 24px;
-            letter-spacing: -2px;
-            line-height: 1.1;
         }
 
-        .hero p {
-            font-size: clamp(18px, 3vw, 24px);
-            color: var(--text-dim);
-            max-width: 600px;
-            margin-bottom: 40px;
-            font-weight: 300;
+        .subtitle {
+            color: #888;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 36px;
         }
 
-        .cta-button {
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            padding: 18px 48px;
-            background: var(--gradient);
-            color: white;
-            text-decoration: none;
-            border-radius: 16px;
-            font-size: 20px;
+        .cta-btn {
+            display: block;
+            width: 100%;
+            padding: 18px 0;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #8b00ff, #ff006e);
+            color: #fff;
+            font-size: 17px;
             font-weight: 700;
+            text-decoration: none;
             transition: all 0.3s ease;
-            box-shadow: 0 8px 32px var(--accent-glow);
+            box-shadow: 0 8px 32px rgba(139, 0, 255, 0.35);
+            position: relative;
+            overflow: hidden;
         }
 
-        .cta-button:hover {
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 12px 48px var(--accent-glow);
+        .cta-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(139, 0, 255, 0.5);
         }
 
-        .hero-stats {
+        .cta-btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: rotate(45deg);
+            animation: shine 3s ease-in-out infinite;
+        }
+
+        @keyframes shine {
+            0% {
+                transform: translateX(-100%) rotate(45deg);
+            }
+
+            100% {
+                transform: translateX(100%) rotate(45deg);
+            }
+        }
+
+        .stats {
             display: flex;
-            gap: 48px;
-            margin-top: 60px;
-            flex-wrap: wrap;
             justify-content: center;
+            gap: 32px;
+            margin-top: 28px;
         }
 
         .stat {
             text-align: center;
         }
 
-        .stat-number {
-            font-size: 36px;
-            font-weight: 800;
-            background: var(--gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .stat-num {
+            color: #fff;
+            font-size: 20px;
+            font-weight: 900;
         }
 
         .stat-label {
-            font-size: 14px;
-            color: var(--text-dim);
+            color: #666;
+            font-size: 11px;
             margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        /* ===== CHARACTERS ===== */
-        .section {
-            padding: 100px 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .section-title {
-            text-align: center;
-            font-size: clamp(32px, 5vw, 48px);
-            font-weight: 800;
-            margin-bottom: 16px;
-            letter-spacing: -1px;
-        }
-
-        .section-subtitle {
-            text-align: center;
-            color: var(--text-dim);
-            font-size: 18px;
-            margin-bottom: 64px;
-        }
-
-        .characters-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 24px;
-        }
-
-        .character-card {
-            background: var(--bg-card);
-            border-radius: 24px;
-            padding: 32px 24px;
-            text-align: center;
-            border: 1px solid rgba(255,255,255,0.06);
-            transition: all 0.4s ease;
-            cursor: pointer;
-        }
-
-        .character-card:hover {
-            transform: translateY(-8px);
-            background: var(--bg-card-hover);
-            border-color: rgba(233,30,99,0.3);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-        }
-
-        .char-emoji {
-            font-size: 64px;
-            margin-bottom: 16px;
-            display: block;
-        }
-
-        .char-name {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-
-        .char-age {
-            color: var(--accent-light);
-            font-size: 14px;
-            margin-bottom: 12px;
-        }
-
-        .char-desc {
-            color: var(--text-dim);
-            font-size: 15px;
+        .warning {
+            margin-top: 28px;
+            color: #555;
+            font-size: 11px;
             line-height: 1.5;
         }
 
-        /* ===== FEATURES ===== */
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 24px;
+        .warning span {
+            color: #ff006e;
         }
 
-        .feature-card {
-            background: var(--bg-card);
-            border-radius: 20px;
-            padding: 32px;
-            border: 1px solid rgba(255,255,255,0.06);
-            transition: all 0.3s ease;
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
         }
 
-        .feature-card:hover {
-            border-color: rgba(233,30,99,0.2);
-            background: var(--bg-card-hover);
-        }
+        @keyframes pulse {
 
-        .feature-icon {
-            font-size: 40px;
-            margin-bottom: 16px;
-            display: block;
-        }
+            0%,
+            100% {
+                opacity: 1;
+            }
 
-        .feature-title {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .feature-desc {
-            color: var(--text-dim);
-            font-size: 15px;
-        }
-
-        /* ===== PRICING ===== */
-        .pricing-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 24px;
-            max-width: 900px;
-            margin: 0 auto;
-        }
-
-        .price-card {
-            background: var(--bg-card);
-            border-radius: 24px;
-            padding: 36px 28px;
-            text-align: center;
-            border: 1px solid rgba(255,255,255,0.06);
-            position: relative;
-            transition: all 0.3s ease;
-        }
-
-        .price-card.popular {
-            border-color: var(--accent);
-            box-shadow: 0 0 40px var(--accent-glow);
-            transform: scale(1.05);
-        }
-
-        .price-card.popular::before {
-            content: '⭐ EN POPÜLER';
-            position: absolute;
-            top: -14px; left: 50%; transform: translateX(-50%);
-            background: var(--gradient);
-            padding: 6px 20px;
-            border-radius: 50px;
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        .price-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .price-card.popular:hover {
-            transform: scale(1.05) translateY(-5px);
-        }
-
-        .price-name {
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .price-amount {
-            font-size: 48px;
-            font-weight: 900;
-            background: var(--gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 4px;
-        }
-
-        .price-currency {
-            color: var(--text-dim);
-            font-size: 14px;
-            margin-bottom: 24px;
-        }
-
-        .price-features {
-            list-style: none;
-            text-align: left;
-            margin-bottom: 24px;
-        }
-
-        .price-features li {
-            padding: 8px 0;
-            color: var(--text-dim);
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .price-features li::before {
-            content: '✓';
-            color: var(--accent-light);
-            font-weight: bold;
-        }
-
-        .price-btn {
-            display: block;
-            padding: 14px;
-            border-radius: 12px;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            background: rgba(233,30,99,0.1);
-            color: var(--accent-light);
-            border: 1px solid rgba(233,30,99,0.3);
-        }
-
-        .price-btn:hover {
-            background: var(--gradient);
-            color: white;
-            border-color: transparent;
-        }
-
-        .price-card.popular .price-btn {
-            background: var(--gradient);
-            color: white;
-            border: none;
-        }
-
-        /* ===== FOOTER CTA ===== */
-        .final-cta {
-            text-align: center;
-            padding: 120px 20px;
-            position: relative;
-        }
-
-        .final-cta::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: radial-gradient(ellipse at center, rgba(233,30,99,0.15) 0%, transparent 60%);
-        }
-
-        .final-cta > * { position: relative; z-index: 1; }
-
-        .final-cta h2 {
-            font-size: clamp(32px, 5vw, 52px);
-            font-weight: 800;
-            margin-bottom: 16px;
-            letter-spacing: -1px;
-        }
-
-        .final-cta p {
-            color: var(--text-dim);
-            font-size: 18px;
-            margin-bottom: 40px;
-        }
-
-        /* ===== FOOTER ===== */
-        footer {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--text-dim);
-            font-size: 14px;
-            border-top: 1px solid rgba(255,255,255,0.06);
-        }
-
-        /* ===== ANIMATIONS ===== */
-        .fade-in {
-            opacity: 0;
-            transform: translateY(30px);
-            transition: all 0.8s ease;
-        }
-        .fade-in.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        /* ===== FLOATING HEARTS ===== */
-        .hearts-container {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            pointer-events: none;
-            z-index: 0;
-            overflow: hidden;
-        }
-
-        .floating-heart {
-            position: absolute;
-            font-size: 20px;
-            opacity: 0.15;
-            animation: float-up linear infinite;
-        }
-
-        @keyframes float-up {
-            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-            10% { opacity: 0.15; }
-            90% { opacity: 0.15; }
-            100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
-        }
-
-        @media (max-width: 768px) {
-            .hero-stats { gap: 24px; }
-            .pricing-grid { grid-template-columns: 1fr; }
-            .price-card.popular { transform: none; }
-            .price-card.popular:hover { transform: translateY(-5px); }
+            50% {
+                opacity: 0.6;
+            }
         }
     </style>
 </head>
-<body>
-    <!-- Floating Hearts Background -->
-    <div class="hearts-container" id="hearts"></div>
 
-    <!-- HERO -->
-    <section class="hero">
-        <div class="hero-badge">💖 Yapay Zeka Dostun Burada</div>
-        <h1>AILoverBot</h1>
-        <p>Telegram'da seninle sohbet eden, sesli mesaj gönderen, fotoğraf paylaşan yapay zeka partnerin.</p>
-        <a href="https://t.me/AILoverBot" class="cta-button" id="main-cta">
-            💬 Telegram'da Başla
+<body>
+    <div class="bg-glow"></div>
+    <div class="container">
+        <div class="badge">🔒 Sadece Davetlilere Özel</div>
+        <h1>Sana Özel <span>Gizli Kulüp</span>'e Hoş Geldin</h1>
+        <p class="subtitle">Sansürsüz, filtresiz, tamamen anonim.<br>Favori karakterini seç ve hemen sohbete başla.</p>
+
+        <a href="https://t.me/MiaQuenn_bot" class="cta-btn" id="ctaBtn">
+            🔥 Gizli Kataloga Gir
         </a>
-        <div class="hero-stats">
+
+        <div class="stats">
             <div class="stat">
-                <div class="stat-number">4</div>
+                <div class="stat-num pulse">🟢</div>
+                <div class="stat-label">Şu an aktif</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num">4</div>
                 <div class="stat-label">Karakter</div>
             </div>
             <div class="stat">
-                <div class="stat-number">7/24</div>
-                <div class="stat-label">Online</div>
-            </div>
-            <div class="stat">
-                <div class="stat-number">5</div>
-                <div class="stat-label">Bedava Mesaj/Gün</div>
-            </div>
-            <div class="stat">
-                <div class="stat-number">∞</div>
-                <div class="stat-label">VIP Mesaj</div>
+                <div class="stat-num">18+</div>
+                <div class="stat-label">Yaş Sınırı</div>
             </div>
         </div>
-    </section>
 
-    <!-- CHARACTERS -->
-    <section class="section fade-in">
-        <h2 class="section-title">Karakterlerle Tanış</h2>
-        <p class="section-subtitle">Seninle konuşmak için sabırsızlanıyorlar...</p>
-        <div class="characters-grid">
-            <div class="character-card">
-                <span class="char-emoji">🌸</span>
-                <div class="char-name">Mia</div>
-                <div class="char-age">23 yaş</div>
-                <div class="char-desc">Sıcak, romantik ve samimi. Seninle her şeyi paylaşmak istiyor.</div>
-            </div>
-            <div class="character-card">
-                <span class="char-emoji">🔥</span>
-                <div class="char-name">Elif</div>
-                <div class="char-age">27 yaş</div>
-                <div class="char-desc">Dominant, gizemli ve çekici. Seni etrafında döndürecek.</div>
-            </div>
-            <div class="character-card">
-                <span class="char-emoji">🌙</span>
-                <div class="char-name">Yuki</div>
-                <div class="char-age">20 yaş</div>
-                <div class="char-desc">Utangaç, tatlı ve sevimli. Anime kızı hayalini yaşa.</div>
-            </div>
-            <div class="character-card">
-                <span class="char-emoji">💋</span>
-                <div class="char-name">Defne</div>
-                <div class="char-age">25 yaş</div>
-                <div class="char-desc">Sosyetik, eğlenceli ve cesur. Asla sıkılmazsın.</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- FEATURES -->
-    <section class="section fade-in">
-        <h2 class="section-title">Neler Yapabilirsin?</h2>
-        <p class="section-subtitle">Gerçek bir sohbet deneyimi</p>
-        <div class="features-grid">
-            <div class="feature-card">
-                <span class="feature-icon">💬</span>
-                <div class="feature-title">Sınırsız Sohbet</div>
-                <div class="feature-desc">Her konuda doğal, akıcı sohbet. Seni dinliyor, anlıyor ve karşılık veriyor.</div>
-            </div>
-            <div class="feature-card">
-                <span class="feature-icon">📸</span>
-                <div class="feature-title">Fotoğraf Paylaşımı</div>
-                <div class="feature-desc">Selfie iste, farklı pozlarda fotoğraf al. Her seferinde aynı yüz — tutarlı karakter.</div>
-            </div>
-            <div class="feature-card">
-                <span class="feature-icon">🎤</span>
-                <div class="feature-title">Sesli Mesaj</div>
-                <div class="feature-desc">Sesli mesaj gönder, o da sesli yanıt versin. Her karakterin kendine özgü sesi var.</div>
-            </div>
-            <div class="feature-card">
-                <span class="feature-icon">❤️</span>
-                <div class="feature-title">Flört Seviyesi</div>
-                <div class="feature-desc">Konuştukça yakınlaşın. 5 seviye: Tanışma → Arkadaşlık → Yakınlaşma → Romantik → Aşık</div>
-            </div>
-            <div class="feature-card">
-                <span class="feature-icon">🎭</span>
-                <div class="feature-title">4 Farklı Karakter</div>
-                <div class="feature-desc">Anında karakter değiştir. Her birinin farklı kişiliği, sesi ve tarzı var.</div>
-            </div>
-            <div class="feature-card">
-                <span class="feature-icon">🎁</span>
-                <div class="feature-title">Günlük Bedava</div>
-                <div class="feature-desc">Her gün 5 bedava mesaj hakkı. Daha fazlası için kredi yükle veya VIP ol.</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- PRICING -->
-    <section class="section fade-in">
-        <h2 class="section-title">Fiyatlar</h2>
-        <p class="section-subtitle">Herkese uygun paketler</p>
-        <div class="pricing-grid">
-            <div class="price-card">
-                <div class="price-name">Başlangıç</div>
-                <div class="price-amount">50</div>
-                <div class="price-currency">kredi — 25 ⭐</div>
-                <ul class="price-features">
-                    <li>~50 metin mesajı</li>
-                    <li>~5 fotoğraf</li>
-                    <li>~10 sesli yanıt</li>
-                </ul>
-                <a href="https://t.me/AILoverBot?start=buy" class="price-btn">Satın Al</a>
-            </div>
-            <div class="price-card popular">
-                <div class="price-name">500 Kredi</div>
-                <div class="price-amount">500</div>
-                <div class="price-currency">kredi — 150 ⭐</div>
-                <ul class="price-features">
-                    <li>~500 metin mesajı</li>
-                    <li>~50 fotoğraf</li>
-                    <li>~100 sesli yanıt</li>
-                    <li>En iyi fiyat/performans</li>
-                </ul>
-                <a href="https://t.me/AILoverBot?start=buy" class="price-btn">Satın Al</a>
-            </div>
-            <div class="price-card">
-                <div class="price-name">VIP Aylık</div>
-                <div class="price-amount">👑</div>
-                <div class="price-currency">sınırsız — 300 ⭐/ay</div>
-                <ul class="price-features">
-                    <li>Sınırsız mesaj</li>
-                    <li>Sınırsız fotoğraf</li>
-                    <li>Sınırsız sesli yanıt</li>
-                    <li>Öncelikli destek</li>
-                </ul>
-                <a href="https://t.me/AILoverBot?start=buy" class="price-btn">VIP Ol</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- FINAL CTA -->
-    <section class="final-cta fade-in">
-        <h2>Hemen Başla, Ücretsiz!</h2>
-        <p>İlk 50 kredin hediye. Telegram'da hemen konuşmaya başla.</p>
-        <a href="https://t.me/AILoverBot" class="cta-button">💬 Telegram'da Başla</a>
-    </section>
-
-    <!-- FOOTER -->
-    <footer>
-        <p>© 2026 AILoverBot — Yapay Zeka Sevgilin 💖</p>
-    </footer>
+        <p class="warning">⚠️ <span>Uyarı:</span> Kontenjan sınırlıdır. VIP erişim her an kapatılabilir.</p>
+    </div>
 
     <script>
-        // Floating hearts
-        const hearts = ['💖', '❤️', '💕', '💗', '💓', '✨', '🌸'];
-        const container = document.getElementById('hearts');
-        
-        function createHeart() {
-            const heart = document.createElement('span');
-            heart.className = 'floating-heart';
-            heart.textContent = hearts[Math.floor(Math.random() * hearts.length)];
-            heart.style.left = Math.random() * 100 + '%';
-            heart.style.fontSize = (12 + Math.random() * 16) + 'px';
-            heart.style.animationDuration = (8 + Math.random() * 12) + 's';
-            heart.style.animationDelay = Math.random() * 5 + 's';
-            container.appendChild(heart);
-            setTimeout(() => heart.remove(), 20000);
-        }
-        
-        for (let i = 0; i < 12; i++) createHeart();
-        setInterval(createHeart, 2000);
-
-        // Scroll fade-in animation
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                }
-            });
-        }, { threshold: 0.1 });
-        
-        document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+        // Basit tiklama sayaci (opsiyonel analytics)
+        document.getElementById('ctaBtn').addEventListener('click', function () {
+            // Eger Google Analytics veya benzeri eklemek istersen buraya koy
+            console.log('CTA tiklandi');
+        });
     </script>
 </body>
+
 </html>
