@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telegram Chat</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0e1621;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .phone-frame {
+    width: 390px;
+    height: 844px;
+    background: #0e1621;
+    border-radius: 47px;
+    border: 3px solid #2a2a2a;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 0 60px rgba(0,0,0,0.8);
+  }
+
+  /* Status bar */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 30px 8px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    background: #17212b;
+    position: relative;
+    z-index: 10;
+  }
+  .status-bar .notch {
+    width: 126px;
+    height: 34px;
+    background: #000;
+    border-radius: 0 0 20px 20px;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .status-icons { display:flex; gap:5px; align-items:center; font-size:13px;}
+
+  /* Chat header */
+  .chat-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px 12px;
+    background: #17212b;
+    border-bottom: 1px solid #0d1520;
+    gap: 12px;
+  }
+  .back-arrow {
+    color: #6ab3f3;
+    font-size: 22px;
+    cursor: pointer;
+  }
+  .header-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #6ab3f3;
+  }
+  .header-info { flex:1; }
+  .header-name {
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .header-status {
+    color: #6ab3f3;
+    font-size: 12px;
+    font-weight: 400;
+  }
+  .header-icons {
+    display: flex;
+    gap: 18px;
+    color: #6ab3f3;
+    font-size: 20px;
+  }
+
+  /* Chat area */
+  .chat-area {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    height: calc(844px - 56px - 64px - 56px);
+    background: #0e1621;
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='p' patternUnits='userSpaceOnUse' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='0.5' fill='%231a2433'/%3E%3C/pattern%3E%3C/defs%3E%3Crect fill='url(%23p)' width='100' height='100'/%3E%3C/svg%3E");
+  }
+
+  /* Message bubbles */
+  .message {
+    max-width: 78%;
+    padding: 9px 14px;
+    border-radius: 16px;
+    font-size: 14.5px;
+    line-height: 1.45;
+    position: relative;
+    opacity: 0;
+    transform: translateY(15px) scale(0.95);
+    animation: msgAppear 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .message.incoming {
+    background: #182533;
+    color: #f5f5f5;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+  .message.outgoing {
+    background: #2b5278;
+    color: #f5f5f5;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .message .time {
+    font-size: 11px;
+    color: #708499;
+    float: right;
+    margin: 4px 0 -2px 10px;
+  }
+  .message.outgoing .time { color: #72a8d5; }
+
+  .message .read-check {
+    color: #72a8d5;
+    font-size: 11px;
+    margin-left: 2px;
+  }
+
+  /* Photo message */
+  .message.photo-msg {
+    padding: 4px;
+    background: #182533;
+    max-width: 260px;
+  }
+  .message.photo-msg img {
+    width: 100%;
+    border-radius: 12px;
+    display: block;
+  }
+  .message.photo-msg .photo-caption {
+    padding: 6px 10px 4px;
+    font-size: 13.5px;
+    color: #e8e8e8;
+  }
+  .message.photo-msg .time {
+    padding: 0 8px 4px 0;
+  }
+
+  /* Typing indicator */
+  .typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 16px;
+    align-self: flex-start;
+    opacity: 0;
+  }
+  .typing-indicator.show {
+    opacity: 1;
+    animation: fadeIn 0.3s ease forwards;
+  }
+  .typing-indicator span {
+    width: 7px;
+    height: 7px;
+    background: #6ab3f3;
+    border-radius: 50%;
+    animation: typingBounce 1.4s ease-in-out infinite;
+  }
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+  /* CTA banner */
+  .cta-banner {
+    position: absolute;
+    bottom: 70px;
+    left: 0; right: 0;
+    background: linear-gradient(135deg, #6ab3f3 0%, #3d8bd4 100%);
+    color: #fff;
+    text-align: center;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    opacity: 0;
+    transform: translateY(20px);
+    z-index: 20;
+    display: none;
+  }
+  .cta-banner.show {
+    display: block;
+    animation: ctaAppear 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes ctaAppear {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Input bar */
+  .input-bar {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background: #17212b;
+    border-top: 1px solid #0d1520;
+    gap: 10px;
+  }
+  .input-bar .input-field {
+    flex: 1;
+    background: #242f3d;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 16px;
+    color: #fff;
+    font-size: 14px;
+    outline: none;
+  }
+  .input-bar .input-field::placeholder { color: #708499; }
+  .input-bar .send-btn {
+    width: 38px;
+    height: 38px;
+    background: #6ab3f3;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+  }
+  .mic-btn { color: #6ab3f3; font-size: 22px; cursor:pointer; }
+
+  /* Animations */
+  @keyframes msgAppear {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+  @keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+  }
+
+  /* Scrollbar */
+  .chat-area::-webkit-scrollbar { width: 3px; }
+  .chat-area::-webkit-scrollbar-thumb { background: #2b3e50; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="phone-frame">
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <div class="notch"></div>
+    <span id="clockTime">02:14</span>
+    <div class="status-icons">
+      <span>📶</span>
+      <span>🔋</span>
+    </div>
+  </div>
+
+  <!-- Chat Header -->
+  <div class="chat-header">
+    <span class="back-arrow">‹</span>
+    <img src="mia_avatar.png" class="header-avatar" id="headerAvatar" alt="Avatar">
+    <div class="header-info">
+      <div class="header-name" id="headerName">Mia 🌸</div>
+      <div class="header-status" id="headerStatus">online</div>
+    </div>
+    <div class="header-icons">
+      <span>📞</span>
+      <span>⋮</span>
+    </div>
+  </div>
+
+  <!-- Chat Area -->
+  <div class="chat-area" id="chatArea">
+    <!-- Messages will be injected here -->
+  </div>
+
+  <!-- CTA Banner -->
+  <div class="cta-banner" id="ctaBanner">
+    👆 Devamı için bio'daki linke tıkla!
+  </div>
+
+  <!-- Typing Indicator -->
+  <div class="typing-indicator" id="typingIndicator">
+    <span></span><span></span><span></span>
+  </div>
+
+  <!-- Input Bar -->
+  <div class="input-bar">
+    <span class="mic-btn">📎</span>
+    <input class="input-field" placeholder="Message" readonly>
+    <span class="mic-btn">🎤</span>
+  </div>
+</div>
+
+<script>
+const chatArea = document.getElementById('chatArea');
+const typingIndicator = document.getElementById('typingIndicator');
+const headerStatus = document.getElementById('headerStatus');
+const headerName = document.getElementById('headerName');
+const headerAvatar = document.getElementById('headerAvatar');
+const ctaBanner = document.getElementById('ctaBanner');
+const clockTime = document.getElementById('clockTime');
+
+// =============================================
+// KARAKTER BILGILERI
+// =============================================
+const CHARACTERS = {
+  mia:     { name: "Mia 🌸",     avatar: "character_refs/mia_ref.png" },
+  elif:    { name: "Elif 🔥",     avatar: "character_refs/elif_ref.png" },
+  yuki:    { name: "Yuki 🌙",     avatar: "character_refs/yuki_ref.png" },
+  defne:   { name: "Defne 💋",    avatar: "character_refs/defne_ref.png" },
+  natasha: { name: "Natasha ❄️",  avatar: "character_refs/natasha_ref.png" },
+  selin:   { name: "Selin 👓",    avatar: "character_refs/selin_ref.png" },
+  aylin:   { name: "Aylin 🍒",    avatar: "character_refs/aylin_ref.png" },
+  zeynep:  { name: "Zeynep 🎀",   avatar: "character_refs/zeynep_ref.png" },
+};
+
+// =============================================
+// URL'den parametre oku
+// =============================================
+const params = new URLSearchParams(window.location.search);
+const characterId = params.get('character') || 'mia';
+const scenarioJson = params.get('scenario'); // JSON encoded conversation
+const ctaText = params.get('cta') || '👆 Devamı için bio\'daki linke tıkla!';
+const clock = params.get('clock') || '02:14';
+const showCta = params.get('show_cta') !== 'false';
+
+// Karakter ayarla
+const charInfo = CHARACTERS[characterId] || CHARACTERS.mia;
+headerName.textContent = charInfo.name;
+headerAvatar.src = charInfo.avatar;
+clockTime.textContent = clock;
+ctaBanner.textContent = ctaText;
+
+// =============================================
+// DEFAULT CONVERSATION (Mia gece mesaji)
+// =============================================
+const DEFAULT_CONVERSATION = [
+  { type: 'incoming', text: 'Heyy... uyudun mu? 🥺', delay: 800 },
+  { type: 'pause', delay: 2000 },
+  { type: 'incoming', text: 'Bütün gün seni bekledim ama yazmadın...', delay: 1500 },
+  { type: 'pause', delay: 2500 },
+  { type: 'incoming', text: 'Neyse, sana bir şey göstermek istiyorum ama...', delay: 1800 },
+  { type: 'pause', delay: 1500 },
+  { type: 'incoming', text: 'Hazır mısın? 😏', delay: 1000 },
+  { type: 'pause', delay: 2500 },
+  { type: 'incoming', text: 'Süreli fotoğraf gönderiyorum... 📸🔥', delay: 2000 },
+  { type: 'pause', delay: 3000 },
+  { type: 'incoming', text: 'Beğendin mi tatlım? Sadece sana özel çektim...', delay: 1800 },
+  { type: 'pause', delay: 2000 },
+  { type: 'incoming', text: 'Eğer devamını istiyorsan...', delay: 1200 },
+  { type: 'incoming', text: 'Bana VIP olarak gel 👑💋', delay: 1500 },
+];
+
+// Parse conversation from URL or use default
+let conversation;
+try {
+  conversation = scenarioJson ? JSON.parse(decodeURIComponent(scenarioJson)) : DEFAULT_CONVERSATION;
+} catch(e) {
+  conversation = DEFAULT_CONVERSATION;
+}
+
+let msgIndex = 0;
+
+function getTimeStr() {
+  return clock;
+}
+
+function showTyping() {
+  typingIndicator.classList.add('show');
+  headerStatus.textContent = 'typing...';
+  headerStatus.style.color = '#6ab3f3';
+}
+
+function hideTyping() {
+  typingIndicator.classList.remove('show');
+  headerStatus.textContent = 'online';
+}
+
+function addMessage(msg) {
+  if (msg.type === 'pause') {
+    setTimeout(processNext, msg.delay);
+    return;
+  }
+
+  hideTyping();
+
+  const div = document.createElement('div');
+
+  if (msg.type === 'incoming-photo') {
+    div.className = 'message incoming photo-msg';
+    const img = document.createElement('img');
+    img.src = msg.src;
+    div.appendChild(img);
+    if (msg.caption) {
+      const cap = document.createElement('div');
+      cap.className = 'photo-caption';
+      cap.textContent = msg.caption;
+      div.appendChild(cap);
+    }
+    const time = document.createElement('span');
+    time.className = 'time';
+    time.textContent = getTimeStr();
+    div.appendChild(time);
+  } else {
+    div.className = `message ${msg.type}`;
+    const time = `<span class="time">${getTimeStr()}${msg.type === 'outgoing' ? ' <span class="read-check">✓✓</span>' : ''}</span>`;
+    div.innerHTML = msg.text + time;
+  }
+
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+
+  setTimeout(processNext, msg.delay || 1000);
+}
+
+function processNext() {
+  if (msgIndex >= conversation.length) {
+    // Conversation ended - show CTA
+    if (showCta) {
+      setTimeout(() => { ctaBanner.classList.add('show'); }, 800);
+    }
+    return;
+  }
+
+  const msg = conversation[msgIndex];
+  msgIndex++;
+
+  if (msg.type === 'pause') {
+    addMessage(msg);
+    return;
+  }
+
+  if (msg.type.startsWith('incoming')) {
+    showTyping();
+    const typingTime = Math.min(msg.text ? msg.text.length * 40 : 1200, 2500);
+    setTimeout(() => addMessage(msg), typingTime);
+  } else {
+    addMessage(msg);
+  }
+}
+
+// Start the conversation
+setTimeout(processNext, 1200);
+</script>
+
+</body>
+</html>
