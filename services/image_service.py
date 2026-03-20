@@ -147,7 +147,7 @@ async def _call_gemini_with_reference(full_prompt: str, character_id: str) -> st
     with open(ref_path, 'rb') as f:
         ref_data = base64.b64encode(f.read()).decode()
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key={GEMINI_API_KEY}"
     headers = {"Content-Type": "application/json"}
     payload = {
         "contents": [{
@@ -182,7 +182,7 @@ async def _call_gemini_with_reference(full_prompt: str, character_id: str) -> st
                     return None
                 else:
                     error_text = await response.text()
-                    logger.warning(f"Gemini referans hata: {response.status}")
+                    logger.warning(f"Gemini referans hata: {response.status} - {error_text[:200]}")
                     return None
     except Exception as e:
         logger.error(f"Gemini referans hatasi: {e}")
@@ -193,7 +193,7 @@ async def _call_gemini_image(full_prompt: str) -> str:
     if not GEMINI_API_KEY:
         return None
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key={GEMINI_API_KEY}"
     headers = {"Content-Type": "application/json"}
     payload = {
         "contents": [{"parts": [{"text": f"Generate this image: {full_prompt}"}]}],
